@@ -1246,7 +1246,7 @@ async def setmaxattack_command(update: Update, context: ContextTypes.DEFAULT_TYP
     
     try:
         max_attacks = int(context.args[0])
-        if max_attacks < 1 or max_attacks > 500:
+        if max_attacks < 1 or max_attacks > 1000:
             await update.message.reply_text("❌ ᴍᴀxɪᴍᴜᴍ ᴀᴛᴛᴀᴄᴋs ᴍᴜsᴛ ʙᴇ ʙᴇᴛᴡᴇᴇɴ 1 ᴀɴᴅ 100")
             return
         
