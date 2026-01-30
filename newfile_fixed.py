@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = "8330044393:AAFlCdOUi_B1JeNYhQHJPAZeAviJkW7G-i0"
 YML_FILE_PATH = ".github/workflows/main.yml"
 BINARY_FILE_NAME = "soul"
-# ADMIN_IDS = [521756472, 7733336238,7772881209] 
 ADMIN_IDS = [8101867786]
 OWNER_IDS = [8101867786]
 
@@ -279,22 +278,18 @@ def is_approved_user(user_id):
         if current_time < expiry_timestamp:
             return True
         else:
-            
             del approved_users[user_id_str]
             save_approved_users(approved_users)
     return False
 
 def can_user_attack(user_id):
     return (is_owner(user_id) or is_admin(user_id) or is_reseller(user_id) or is_approved_user(user_id)) and not MAINTENANCE_MODE
-# def can_user_attack(user_id):
-#     return (is_owner(user_id) or is_admin(user_id) or is_reseller(user_id) or is_approved_user(user_id)) and not MAINTENANCE_MODE
 
 def can_start_attack(user_id):
     global current_attack, cooldown_until
     
     if MAINTENANCE_MODE:
         return False, "⚠️ **ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ ᴍᴏᴅᴇ**\n━━━━━━━━━━━━━━━━━━━━━━\nʙᴏᴛ ɪs ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ. ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ."
-    
     
     user_id_str = str(user_id)
     current_count = user_attack_counts.get(user_id_str, 0)
@@ -334,7 +329,6 @@ def start_attack(ip, port, time_val, user_id, method):
         "estimated_end_time": time.time() + int(time_val)
     }
     save_attack_state()
-    
     
     user_id_str = str(user_id)
     user_attack_counts[user_id_str] = user_attack_counts.get(user_id_str, 0) + 1
@@ -379,12 +373,9 @@ def get_attack_status():
 
 
 def generate_trial_key(hours):
-    
     key = f"TRL-{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
     
-    
     expiry = time.time() + (hours * 3600)  
-    
     
     trial_keys[key] = {
         "hours": hours,
@@ -412,13 +403,11 @@ def redeem_trial_key(key, user_id):
     if time.time() > key_data["expiry"]:
         return False, "ᴋᴇʏ ᴇxᴘɪʀᴇᴅ"
     
-    
     key_data["used"] = True
     key_data["used_by"] = user_id_str
     key_data["used_at"] = time.time()
     trial_keys[key] = key_data
     save_trial_keys(trial_keys)
-    
     
     expiry = time.time() + (key_data["hours"] * 3600)
     approved_users[user_id_str] = {
@@ -531,8 +520,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔧 **ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ ᴍᴏᴅᴇ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ʙᴏᴛ ɪs ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ.\n"
-            "ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴜɴᴛɪʟ ɪᴛ's ʙᴀᴄᴋ."
-            parse_mode="Markdown",
+            "ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴜɴᴛɪʟ ɪᴛ's ʙᴀᴄᴋ.",
+            parse_mode="Markdown"
         )
         return
     
@@ -551,12 +540,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             })
             save_pending_users(pending_users)
             
-            
             for owner_id in owners.keys():
                 try:
                     await context.bot.send_message(
                         chat_id=int(owner_id),
-                        text=f"📥 **ɴᴇᴡ ᴀᴄᴄᴇss ʀᴇǫᴜᴇsᴛ**\n━━━━━━━━━━━━━━━━━━━━━━\nᴜsᴇʀ: @{update.effective_user.username or 'No username'}\nɪᴅ: `{user_id}`\nᴜsᴇ /add {user_id} 7 ᴛᴏ ᴀᴘᴘʀᴏᴠᴇ"
+                        text=f"📥 **ɴᴇᴡ ᴀᴄᴄᴇss ʀᴇǫᴜᴇsᴛ**\n━━━━━━━━━━━━━━━━━━━━━━\nᴜsᴇʀ: @{update.effective_user.username or 'No username'}\nɪᴅ: `{user_id}`\nᴜsᴇ /add {user_id} 7 ᴛᴏ ᴀᴘᴘʀᴏᴠᴇ",
                         parse_mode="Markdown"
                     )
                 except:
@@ -570,7 +558,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "ᴜsᴇ /id ᴛᴏ ɢᴇᴛ ʏᴏᴜʀ ᴜsᴇʀ ɪᴅ\n"
             "ᴜsᴇ /help ғᴏʀ ᴀᴠᴀɪʟᴀʙʟᴇ ᴄᴏᴍᴍᴀɴᴅs\n\n"
             "💡 **ᴡᴀɴᴛ ᴀ ᴛʀɪᴀʟ?**\n"
-            "ᴀsᴋ ᴀᴅᴍɪɴ ғᴏʀ ᴀ ᴛʀɪᴀʟ ᴋᴇʏ ᴏʀ ʀᴇᴅᴇᴇᴍ ᴏɴᴇ ᴡɪᴛʜ /redeem <ᴋᴇʏ>"
+            "ᴀsᴋ ᴀᴅᴍɪɴ ғᴏʀ ᴀ ᴛʀɪᴀʟ ᴋᴇʏ ᴏʀ ʀᴇᴅᴇᴇᴍ ᴏɴᴇ ᴡɪᴛʜ /redeem <ᴋᴇʏ>",
             parse_mode="Markdown"
         )
         return
@@ -584,7 +572,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"🌐 ᴛᴀʀɢᴇᴛ: `{attack['ip']}:{attack['port']}`\n"
             f"⏱️ ᴇʟᴀᴘsᴇᴅ: `{attack_status['elapsed']}s`\n"
-            f"⏳ ʀᴇᴍᴀɪɴɪɴɢ: `{attack_status['remaining']}s`"
+            f"⏳ ʀᴇᴍᴀɪɴɪɴɢ: `{attack_status['remaining']}s`",
             parse_mode="Markdown"
         )
         return
@@ -594,11 +582,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⏳ **ᴄᴏᴏʟᴅᴏᴡɴ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ `{attack_status['remaining_cooldown']}s`\n"
-            "ʙᴇғᴏʀᴇ sᴛᴀʀᴛɪɴɢ ɴᴇᴡ ᴀᴛᴛᴀᴄᴋ."
+            "ʙᴇғᴏʀᴇ sᴛᴀʀᴛɪɴɢ ɴᴇᴡ ᴀᴛᴛᴀᴄᴋ.",
             parse_mode="Markdown"
         )
         return
-    
     
     if is_owner(user_id):
         if is_primary_owner(user_id):
@@ -611,7 +598,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_role = "💰 ʀᴇsᴇʟʟᴇʀ"
     else:
         user_role = "👤 ᴀᴘᴘʀᴏᴠᴇᴅ ᴜsᴇʀ"
-    
     
     user_id_str = str(user_id)
     current_attacks = 0
@@ -636,7 +622,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📢 **ɴᴏᴛᴇs:**\n"
         f"• ᴏɴʟʏ ᴏɴᴇ ᴀᴛᴛᴀᴄᴋ ᴀᴛ ᴀ ᴛɪᴍᴇ\n"
         f"• {COOLDOWN_DURATION}s ᴄᴏᴏʟᴅᴏᴡɴ ᴀғᴛᴇʀ ᴀᴛᴛᴀᴄᴋ\n"
-        f"• ɪɴᴠᴀʟɪᴅ ɪᴘs: '15', '96'"
+        f"• ɪɴᴠᴀʟɪᴅ ɪᴘs: '15', '96'",
         parse_mode="Markdown"
     )
 
@@ -681,7 +667,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• /addreseller - ᴀᴅᴅ ʀᴇsᴇʟʟᴇʀ\n"
             "• /removereseller - ʀᴇᴍᴏᴠᴇ ʀᴇsᴇʟʟᴇʀ\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "**ɴᴇᴇᴅ ʜᴇʟᴘ?** ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ."
+            "**ɴᴇᴇᴅ ʜᴇʟᴘ?** ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ.",
             parse_mode="Markdown"
         )
     elif can_user_attack(user_id):
@@ -696,7 +682,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• /help - sʜᴏᴡ ʜᴇʟᴘ\n"
             "• /redeem <ᴋᴇʏ> - ʀᴇᴅᴇᴇᴍ ᴛʀɪᴀʟ ᴋᴇʏ\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "**ɴᴇᴇᴅ ʜᴇʟᴘ?** ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ."
+            "**ɴᴇᴇᴅ ʜᴇʟᴘ?** ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ.",
             parse_mode="Markdown"
         )
     else:
@@ -711,7 +697,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "2. ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ\n"
             "3. ᴡᴀɪᴛ ғᴏʀ ᴀᴘᴘʀᴏᴠᴀʟ\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"**ʏᴏᴜʀ ɪᴅ:** `{user_id}`"
+            f"**ʏᴏᴜʀ ɪᴅ:** `{user_id}`",
             parse_mode="Markdown"
         )
 
@@ -725,7 +711,7 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• **ᴜsᴇʀ ɪᴅ:** `{user_id}`\n"
         f"• **ᴜsᴇʀɴᴀᴍᴇ:** @{username}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "sᴇɴᴅ ᴛʜɪs ɪᴅ ᴛᴏ ᴀᴅᴍɪɴ ғᴏʀ ᴀᴄᴄᴇss."
+        "sᴇɴᴅ ᴛʜɪs ɪᴅ ᴛᴏ ᴀᴅᴍɪɴ ғᴏʀ ᴀᴄᴄᴇss.",
         parse_mode="Markdown"
     )
 
@@ -773,7 +759,6 @@ async def myaccess_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         role = "⏳ ᴘᴇɴᴅɪɴɢ"
         expiry = "ᴡᴀɪᴛɪɴɢ ғᴏʀ ᴀᴘᴘʀᴏᴠᴀʟ"
     
-    
     user_id_str = str(user_id)
     current_attacks = user_attack_counts.get(user_id_str, 0)
     remaining_attacks = MAX_ATTACKS - current_attacks
@@ -787,9 +772,9 @@ async def myaccess_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• **ᴇxᴘɪʀʏ:** {expiry}\n"
         f"• **ʀᴇᴍᴀɪɴɪɴɢ ᴀᴛᴛᴀᴄᴋs:** {remaining_attacks}/{MAX_ATTACKS}\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"**ᴀᴛᴛᴀᴄᴋ ᴀᴄᴄᴇss:** {'✅ ʏᴇs' if can_user_attack(user_id) else '❌ ɴᴏ'}"
+        f"**ᴀᴛᴛᴀᴄᴋ ᴀᴄᴄᴇss:** {'✅ ʏᴇs' if can_user_attack(user_id) else '❌ ɴᴏ'}",
         parse_mode="Markdown"
-    )
+        )
 
 
 async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -800,7 +785,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ ᴛᴏ ᴀᴛᴛᴀᴄᴋ.\n"
-            "ᴜsᴇ /start ᴛᴏ ʀᴇǫᴜᴇsᴛ ᴀᴄᴄᴇss."
+            "ᴜsᴇ /start ᴛᴏ ʀᴇǫᴜᴇsᴛ ᴀᴄᴄᴇss.",
             parse_mode="Markdown"
         )
         return
@@ -815,7 +800,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /attack <ɪᴘ> <ᴘᴏʀᴛ> <ᴛɪᴍᴇ>\n\n"
-            "ᴇxᴀᴍᴘʟᴇ: /attack 1.1.1.1 80 60"
+            "ᴇxᴀᴍᴘʟᴇ: /attack 1.1.1.1 80 60",
             parse_mode="Markdown"
         )
         return
@@ -824,7 +809,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ **ɴᴏ sᴇʀᴠᴇʀs ᴀᴠᴀɪʟᴀʙʟᴇ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴠᴀɪʟᴀʙʟᴇ. ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ."
+            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴠᴀɪʟᴀʙʟᴇ. ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ.",
             parse_mode="Markdown"
         )
         return
@@ -835,7 +820,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ɪɴᴠᴀʟɪᴅ ɪᴘ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ɪᴘs sᴛᴀʀᴛɪɴɢ ᴡɪᴛʜ '15' ᴏʀ '96' ᴀʀᴇ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ."
+            "ɪᴘs sᴛᴀʀᴛɪɴɢ ᴡɪᴛʜ '15' ᴏʀ '96' ᴀʀᴇ ɴᴏᴛ ᴀʟʟᴏᴡᴇᴅ.",
             parse_mode="Markdown"
         )
         return
@@ -845,7 +830,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"⚠️ **ɪɴᴠᴀʟɪᴅ ɪᴘ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"{method_name}"
+            f"{method_name}",
             parse_mode="Markdown"
         )
         return
@@ -856,7 +841,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "❌ **ɪɴᴠᴀʟɪᴅ ᴛɪᴍᴇ**\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                "ᴛɪᴍᴇ ᴍᴜsᴛ ʙᴇ ᴀ ᴘᴏsɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ"
+                "ᴛɪᴍᴇ ᴍᴜsᴛ ʙᴇ ᴀ ᴘᴏsɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ",
                 parse_mode="Markdown"
             )
             return
@@ -864,7 +849,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ **ɪɴᴠᴀʟɪᴅ ᴛɪᴍᴇ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛɪᴍᴇ ᴍᴜsᴛ ʙᴇ ᴀ ɴᴜᴍʙᴇʀ"
+            "ᴛɪᴍᴇ ᴍᴜsᴛ ʙᴇ ᴀ ɴᴜᴍʙᴇʀ",
             parse_mode="Markdown"
         )
         return
@@ -872,7 +857,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     start_attack(ip, port, time_val, user_id, method)
     
     progress_msg = await update.message.reply_text(
-        "🔄 **sᴛᴀʀᴛɪɴɢ ᴀᴛᴛᴀᴄᴋ...**"
+        "🔄 **sᴛᴀʀᴛɪɴɢ ᴀᴛᴛᴀᴄᴋ...**",
         parse_mode="Markdown"
     )
     
@@ -907,7 +892,6 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             fail_count += 1
     
-    
     user_id_str = str(user_id)
     remaining_attacks = MAX_ATTACKS - user_attack_counts.get(user_id_str, 0)
     
@@ -923,7 +907,7 @@ async def attack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎯 ʀᴇᴍᴀɪɴɪɴɢ ᴀᴛᴛᴀᴄᴋs: {remaining_attacks}/{MAX_ATTACKS}"
     )
     
-    await progress_msg.edit_text(message)
+    await progress_msg.edit_text(message, parse_mode="Markdown")
     
     def monitor_attack_completion():
         time.sleep(attack_duration)
@@ -941,7 +925,7 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ."
+            "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ.",
             parse_mode="Markdown"
         )
         return
@@ -984,7 +968,7 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ."
+            "ʏᴏᴜ ᴀʀᴇ ɴᴏᴛ ᴀᴜᴛʜᴏʀɪᴢᴇᴅ.",
             parse_mode="Markdown"
         )
         return
@@ -995,7 +979,7 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ **ɴᴏ ᴀᴄᴛɪᴠᴇ ᴀᴛᴛᴀᴄᴋ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ɴᴏ ᴀᴛᴛᴀᴄᴋ ɪs ʀᴜɴɴɪɴɢ."
+            "ɴᴏ ᴀᴛᴛᴀᴄᴋ ɪs ʀᴜɴɴɪɴɢ.",
             parse_mode="Markdown"
         )
         return
@@ -1004,13 +988,13 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ **ɴᴏ sᴇʀᴠᴇʀs ᴀᴠᴀɪʟᴀʙʟᴇ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴅᴅᴇᴅ."
+            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴅᴅᴇᴅ.",
             parse_mode="Markdown"
         )
         return
     
     progress_msg = await update.message.reply_text(
-        "🛑 **sᴛᴏᴘᴘɪɴɢ ᴀᴛᴛᴀᴄᴋ...**"
+        "🛑 **sᴛᴏᴘᴘɪɴɢ ᴀᴛᴛᴀᴄᴋ...**",
         parse_mode="Markdown"
     )
     
@@ -1053,7 +1037,7 @@ async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏳ ᴄᴏᴏʟᴅᴏᴡɴ: {COOLDOWN_DURATION}s"
     )
     
-    await progress_msg.edit_text(message)
+    await progress_msg.edit_text(message, parse_mode="Markdown")
 
 
 async def removexpiredtoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1063,11 +1047,10 @@ async def removexpiredtoken_command(update: Update, context: ContextTypes.DEFAUL
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴇxᴘɪʀᴇᴅ ᴛᴏᴋᴇɴs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴇxᴘɪʀᴇᴅ ᴛᴏᴋᴇɴs.",
             parse_mode="Markdown"
         )
         return
-    
     
     valid_tokens = []
     expired_tokens = []
@@ -1085,7 +1068,6 @@ async def removexpiredtoken_command(update: Update, context: ContextTypes.DEFAUL
     if not expired_tokens:
         await update.message.reply_text("✅ ᴀʟʟ ᴛᴏᴋᴇɴs ᴀʀᴇ ᴠᴀʟɪᴅ.", parse_mode="Markdown")
         return
-    
     
     github_tokens.clear()
     github_tokens.extend(valid_tokens)
@@ -1106,7 +1088,7 @@ async def remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1116,7 +1098,7 @@ async def remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /remove <ᴜsᴇʀ_ɪᴅ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /remove 12345678"
+            "ᴇxᴀᴍᴘʟᴇ: /remove 12345678",
             parse_mode="Markdown"
         )
         return
@@ -1127,16 +1109,13 @@ async def remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         removed = False
         
-        
         if user_to_remove_str in approved_users:
             del approved_users[user_to_remove_str]
             save_approved_users(approved_users)
             removed = True
         
-        
         pending_users[:] = [u for u in pending_users if str(u['user_id']) != user_to_remove_str]
         save_pending_users(pending_users)
-        
         
         if user_to_remove_str in user_attack_counts:
             del user_attack_counts[user_to_remove_str]
@@ -1147,15 +1126,14 @@ async def remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"✅ **ᴜsᴇʀ ᴀᴄᴄᴇss ʀᴇᴍᴏᴠᴇᴅ**\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"ᴜsᴇʀ ɪᴅ: `{user_to_remove}`\n"
-                f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`"
+                f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`",
                 parse_mode="Markdown"
             )
-            
             
             try:
                 await context.bot.send_message(
                     chat_id=user_to_remove,
-                    text="🚫 **ʏᴏᴜʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ʙᴏᴛ ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ. ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ғᴏʀ ᴍᴏʀᴇ ɪɴғᴏʀᴍᴀᴛɪᴏɴ."
+                    text="🚫 **ʏᴏᴜʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ʙᴏᴛ ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ. ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ғᴏʀ ᴍᴏʀᴇ ɪɴғᴏʀᴍᴀᴛɪᴏɴ.",
                     parse_mode="Markdown"
                 )
             except:
@@ -1164,7 +1142,7 @@ async def remove_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 f"❌ **ᴜsᴇʀ ɴᴏᴛ ғᴏᴜɴᴅ**\n"
                 "━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"ᴜsᴇʀ ɪᴅ `{user_to_remove}` ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴀᴘᴘʀᴏᴠᴇᴅ ᴜsᴇʀs."
+                f"ᴜsᴇʀ ɪᴅ `{user_to_remove}` ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴀᴘᴘʀᴏᴠᴇᴅ ᴜsᴇʀs.",
                 parse_mode="Markdown"
             )
         
@@ -1179,7 +1157,7 @@ async def gentrailkey_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1189,14 +1167,14 @@ async def gentrailkey_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /gentrailkey <ʜᴏᴜʀs>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /gentrailkey 24"
+            "ᴇxᴀᴍᴘʟᴇ: /gentrailkey 24",
             parse_mode="Markdown"
         )
         return
     
     try:
         hours = int(context.args[0])
-        if hours < 1 or hours > 720:  
+        if hours < 1 or hours > 720:
             await update.message.reply_text("❌ ʜᴏᴜʀs ᴍᴜsᴛ ʙᴇ ʙᴇᴛᴡᴇᴇɴ 1 ᴀɴᴅ 720 (30 ᴅᴀʏs)", parse_mode="Markdown")
             return
         
@@ -1209,7 +1187,7 @@ async def gentrailkey_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"ᴅᴜʀᴀᴛɪᴏɴ: {hours} ʜᴏᴜʀs\n"
             f"ᴇxᴘɪʀᴇs: ɪɴ {hours} ʜᴏᴜʀs\n\n"
             "ᴜsᴇʀs ᴄᴀɴ ʀᴇᴅᴇᴇᴍ ᴡɪᴛʜ:\n"
-            f"`/redeem {key}`"
+            f"`/redeem {key}`",
             parse_mode="Markdown"
         )
         
@@ -1225,19 +1203,18 @@ async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /redeem <ᴋᴇʏ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /redeem TRL-ABCD-1234-EFGH"
+            "ᴇxᴀᴍᴘʟᴇ: /redeem TRL-ABCD-1234-EFGH",
             parse_mode="Markdown"
         )
         return
     
     key = context.args[0].upper()
     
-    
     if can_user_attack(user_id):
         await update.message.reply_text(
             "⚠️ **ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ ʜᴀᴠᴇ ᴀᴄᴄᴇss**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ ʜᴀᴠᴇ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ʙᴏᴛ. ɴᴏ ɴᴇᴇᴅ ᴛᴏ ʀᴇᴅᴇᴇᴍ ᴀ ᴛʀɪᴀʟ ᴋᴇʏ."
+            "ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ ʜᴀᴠᴇ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ʙᴏᴛ. ɴᴏ ɴᴇᴇᴅ ᴛᴏ ʀᴇᴅᴇᴇᴍ ᴀ ᴛʀɪᴀʟ ᴋᴇʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1249,16 +1226,16 @@ async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✅ **ᴛʀɪᴀʟ ᴀᴄᴛɪᴠᴀᴛᴇᴅ!**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"{message}\n\n"
-            "ʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴜsᴇ /start ᴛᴏ ᴀᴄᴄᴇss ᴛʜᴇ ʙᴏᴛ."
+            "ʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴜsᴇ /start ᴛᴏ ᴀᴄᴄᴇss ᴛʜᴇ ʙᴏᴛ.",
             parse_mode="Markdown"
         )
     else:
         await update.message.reply_text(
             f"❌ **ғᴀɪʟᴇᴅ ᴛᴏ ʀᴇᴅᴇᴇᴍ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"{message}"
+            f"{message}",
             parse_mode="Markdown"
-        )
+    )
 
 
 async def setmaxattack_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1268,7 +1245,7 @@ async def setmaxattack_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇᴛ ᴍᴀxɪᴍᴜᴍ ᴀᴛᴛᴀᴄᴋs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇᴛ ᴍᴀxɪᴍᴜᴍ ᴀᴛᴛᴀᴄᴋs.",
             parse_mode="Markdown"
         )
         return
@@ -1278,7 +1255,7 @@ async def setmaxattack_command(update: Update, context: ContextTypes.DEFAULT_TYP
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /setmaxattack <ɴᴜᴍʙᴇʀ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /setmaxattack 3"
+            "ᴇxᴀᴍᴘʟᴇ: /setmaxattack 3",
             parse_mode="Markdown"
         )
         return
@@ -1296,7 +1273,7 @@ async def setmaxattack_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(
             f"✅ **ᴍᴀxɪᴍᴜᴍ ᴀᴛᴛᴀᴄᴋs ᴜᴘᴅᴀᴛᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"ɴᴇᴡ ʟɪᴍɪᴛ: `{MAX_ATTACKS}` ᴀᴛᴛᴀᴄᴋ(s) ᴘᴇʀ ᴜsᴇʀ"
+            f"ɴᴇᴡ ʟɪᴍɪᴛ: `{MAX_ATTACKS}` ᴀᴛᴛᴀᴄᴋ(s) ᴘᴇʀ ᴜsᴇʀ",
             parse_mode="Markdown"
         )
     except ValueError:
@@ -1310,7 +1287,7 @@ async def userslist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1324,7 +1301,6 @@ async def userslist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for uid, user_info in approved_users.items():
         username = user_info.get('username', f'user_{uid}')
         days = user_info.get('days', '?')
-        
         
         expiry = user_info.get('expiry', 'LIFETIME')
         if expiry == "LIFETIME":
@@ -1356,7 +1332,7 @@ async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ.",
             parse_mode="Markdown"
         )
         return
@@ -1366,7 +1342,7 @@ async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /maintenance <ᴏɴ/ᴏғғ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /maintenance ᴏɴ"
+            "ᴇxᴀᴍᴘʟᴇ: /maintenance ᴏɴ",
             parse_mode="Markdown"
         )
         return
@@ -1381,7 +1357,7 @@ async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "🔧 **ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ ᴍᴏᴅᴇ ᴇɴᴀʙʟᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ʙᴏᴛ ɪs ɴᴏᴡ ᴜɴᴅᴇʀ ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ.\n"
-            "ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜᴇ ʙᴏᴛ."
+            "ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜᴇ ʙᴏᴛ.",
             parse_mode="Markdown"
         )
     elif mode == "off":
@@ -1390,7 +1366,7 @@ async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "✅ **ᴍᴀɪɴᴛᴇɴᴀɴᴄᴇ ᴍᴏᴅᴇ ᴅɪsᴀʙʟᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ʙᴏᴛ ɪs ɴᴏᴡ ᴀᴠᴀɪʟᴀʙʟᴇ ғᴏʀ ᴀʟʟ ᴜsᴇʀs."
+            "ʙᴏᴛ ɪs ɴᴏᴡ ᴀᴠᴀɪʟᴀʙʟᴇ ғᴏʀ ᴀʟʟ ᴜsᴇʀs.",
             parse_mode="Markdown"
         )
     else:
@@ -1404,7 +1380,7 @@ async def setcooldown_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇᴛ ᴄᴏᴏʟᴅᴏᴡɴ."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇᴛ ᴄᴏᴏʟᴅᴏᴡɴ.",
             parse_mode="Markdown"
         )
         return
@@ -1414,7 +1390,7 @@ async def setcooldown_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /setcooldown <sᴇᴄᴏɴᴅs>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /setcooldown 300"
+            "ᴇxᴀᴍᴘʟᴇ: /setcooldown 300",
             parse_mode="Markdown"
         )
         return
@@ -1432,7 +1408,7 @@ async def setcooldown_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             f"✅ **ᴄᴏᴏʟᴅᴏᴡɴ ᴜᴘᴅᴀᴛᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"ɴᴇᴡ ᴄᴏᴏʟᴅᴏᴡɴ: `{COOLDOWN_DURATION}` sᴇᴄᴏɴᴅs"
+            f"ɴᴇᴡ ᴄᴏᴏʟᴅᴏᴡɴ: `{COOLDOWN_DURATION}` sᴇᴄᴏɴᴅs",
             parse_mode="Markdown"
         )
     except ValueError:
@@ -1446,7 +1422,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1456,7 +1432,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /add <ɪᴅ> <ᴅᴀʏs>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /add 123456 7"
+            "ᴇxᴀᴍᴘʟᴇ: /add 123456 7",
             parse_mode="Markdown"
         )
         return
@@ -1465,16 +1441,13 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         new_user_id = int(context.args[0])
         days = int(context.args[1])
         
-        
         pending_users[:] = [u for u in pending_users if str(u['user_id']) != str(new_user_id)]
         save_pending_users(pending_users)
-        
         
         if days == 0:
             expiry = "LIFETIME"
         else:
             expiry = time.time() + (days * 24 * 60 * 60)
-        
         
         approved_users[str(new_user_id)] = {
             "username": update.effective_user.username or f"user_{new_user_id}",
@@ -1485,11 +1458,10 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         save_approved_users(approved_users)
         
-        
         try:
             await context.bot.send_message(
                 chat_id=new_user_id,
-                text=f"✅ **ᴀᴄᴄᴇss ᴀᴘᴘʀᴏᴠᴇᴅ!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ᴀᴘᴘʀᴏᴠᴇᴅ ғᴏʀ {days} ᴅᴀʏs.\nᴜsᴇ /start ᴛᴏ ᴀᴄᴄᴇss ᴛʜᴇ ʙᴏᴛ."
+                text=f"✅ **ᴀᴄᴄᴇss ᴀᴘᴘʀᴏᴠᴇᴅ!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ᴀᴘᴘʀᴏᴠᴇᴅ ғᴏʀ {days} ᴅᴀʏs.\nᴜsᴇ /start ᴛᴏ ᴀᴄᴄᴇss ᴛʜᴇ ʙᴏᴛ.",
                 parse_mode="Markdown"
             )
         except:
@@ -1500,7 +1472,7 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"ᴜsᴇʀ ɪᴅ: `{new_user_id}`\n"
             f"ᴅᴜʀᴀᴛɪᴏɴ: {days} ᴅᴀʏs\n"
-            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`"
+            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`",
             parse_mode="Markdown"
         )
         
@@ -1514,7 +1486,7 @@ async def approveuserslist_command(update: Update, context: ContextTypes.DEFAULT
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1537,7 +1509,7 @@ async def ownerlist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1561,7 +1533,7 @@ async def adminlist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1584,7 +1556,7 @@ async def resellerlist_command(update: Update, context: ContextTypes.DEFAULT_TYP
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1619,7 +1591,7 @@ async def pricelist_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• 4 ᴅᴀʏs - ₹450\n"
         "• 7 ᴅᴀʏs - ₹650\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ғᴏʀ ᴀᴄᴄᴇss"
+        "ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ғᴏʀ ᴀᴄᴄᴇss",
         parse_mode="Markdown"
     )
 
@@ -1633,7 +1605,7 @@ async def resellerpricelist_command(update: Update, context: ContextTypes.DEFAUL
         "• 4 ᴅᴀʏs - ₹400\n"
         "• 7 ᴅᴀʏs - ₹550\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "ᴄᴏɴᴛᴀᴄᴛ ᴏᴡɴᴇʀ ғᴏʀ ʀᴇsᴇʟʟᴇʀ ᴀᴄᴄᴇss"
+        "ᴄᴏɴᴛᴀᴄᴛ ᴏᴡɴᴇʀ ғᴏʀ ʀᴇsᴇʟʟᴇʀ ᴀᴄᴄᴇss",
         parse_mode="Markdown"
     )
 
@@ -1644,7 +1616,7 @@ async def listgrp_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ."
+            "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ғᴏʀ ᴀᴅᴍɪɴs ᴏɴʟʏ.",
             parse_mode="Markdown"
         )
         return
@@ -1667,7 +1639,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇɴᴅ ʙʀᴏᴀᴅᴄᴀsᴛ."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ sᴇɴᴅ ʙʀᴏᴀᴅᴄᴀsᴛ.",
             parse_mode="Markdown"
         )
         return
@@ -1675,7 +1647,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "📢 **ʙʀᴏᴀᴅᴄᴀsᴛ ᴍᴇssᴀɢᴇ**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴛʜᴇ ᴍᴇssᴀɢᴇ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ:"
+        "ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴛʜᴇ ᴍᴇssᴀɢᴇ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ʙʀᴏᴀᴅᴄᴀsᴛ:",
         parse_mode="Markdown"
     )
     
@@ -1693,21 +1665,16 @@ async def broadcast_message_handler(update: Update, context: ContextTypes.DEFAUL
     return ConversationHandler.END
 
 async def send_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, message: str):
-    
     all_users = set()
-    
     
     for user_id in approved_users.keys():
         all_users.add(int(user_id))
     
-    
     for user_id in resellers.keys():
         all_users.add(int(user_id))
     
-    
     for user_id in admins.keys():
         all_users.add(int(user_id))
-    
     
     for user_id in owners.keys():
         all_users.add(int(user_id))
@@ -1718,7 +1685,7 @@ async def send_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, mes
     
     progress_msg = await update.message.reply_text(
         f"📢 **sᴇɴᴅɪɴɢ ʙʀᴏᴀᴅᴄᴀsᴛ...**\n"
-        f"ᴛᴏᴛᴀʟ ᴜsᴇʀs: {total_users}"
+        f"ᴛᴏᴛᴀʟ ᴜsᴇʀs: {total_users}",
         parse_mode="Markdown"
     )
     
@@ -1726,7 +1693,7 @@ async def send_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, mes
         try:
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"📢 **ʙʀᴏᴀᴅᴄᴀsᴛ**\n━━━━━━━━━━━━━━━━━━━━━━\n{message}"
+                text=f"📢 **ʙʀᴏᴀᴅᴄᴀsᴛ**\n━━━━━━━━━━━━━━━━━━━━━━\n{message}",
                 parse_mode="Markdown"
             )
             success_count += 1
@@ -1740,8 +1707,10 @@ async def send_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE, mes
         f"• ✅ sᴜᴄᴄᴇssғᴜʟ: {success_count}\n"
         f"• ❌ ғᴀɪʟᴇᴅ: {fail_count}\n"
         f"• 📊 ᴛᴏᴛᴀʟ: {total_users}\n"
-        f"• 📝 ᴍᴇssᴀɢᴇ: {message[:50]}..."
-    )
+        f"• 📝 ᴍᴇssᴀɢᴇ: {message[:50]}...",
+        parse_mode="Markdown"
+        )
+
 
 
 async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1751,7 +1720,7 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴘʀɪᴍᴀʀʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ᴏᴡɴᴇʀs."
+            "ᴏɴʟʏ ᴘʀɪᴍᴀʀʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ᴏᴡɴᴇʀs.",
             parse_mode="Markdown"
         )
         return
@@ -1762,7 +1731,7 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴛʜᴇ ᴜsᴇʀ ɪᴅ ᴀɴᴅ ᴜsᴇʀɴᴀᴍᴇ ᴛᴏ ᴀᴅᴅ ᴀs ᴏᴡɴᴇʀ:\n\n"
             "ᴜsᴀɢᴇ: /addowner <ᴜsᴇʀ_ɪᴅ> <ᴜsᴇʀɴᴀᴍᴇ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /addowner 12345678 johndoe"
+            "ᴇxᴀᴍᴘʟᴇ: /addowner 12345678 johndoe",
             parse_mode="Markdown"
         )
         return
@@ -1775,7 +1744,6 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ ᴛʜɪs ᴜsᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴏᴡɴᴇʀ", parse_mode="Markdown")
             return
         
-        
         owners[str(new_owner_id)] = {
             "username": username,
             "added_by": user_id,
@@ -1783,7 +1751,6 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "is_primary": False
         }
         save_owners(owners)
-        
         
         if str(new_owner_id) in admins:
             del admins[str(new_owner_id)]
@@ -1793,11 +1760,10 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             del resellers[str(new_owner_id)]
             save_resellers(resellers)
         
-        
         try:
             await context.bot.send_message(
                 chat_id=new_owner_id,
-                text="👑 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜ ʜᴀᴠᴇ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴀs ᴀɴ ᴏᴡɴᴇʀ ᴏғ ᴛʜᴇ ʙᴏᴛ!\nʏᴏᴜ ɴᴏᴡ ʜᴀᴠᴇ ғᴜʟʟ ᴀᴄᴄᴇss ᴛᴏ ᴀʟʟ ᴀᴅᴍɪɴ ғᴇᴀᴛᴜʀᴇs."
+                text="👑 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜ ʜᴀᴠᴇ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴀs ᴀɴ ᴏᴡɴᴇʀ ᴏғ ᴛʜᴇ ʙᴏᴛ!\nʏᴏᴜ ɴᴏᴡ ʜᴀᴠᴇ ғᴜʟʟ ᴀᴄᴄᴇss ᴛᴏ ᴀʟʟ ᴀᴅᴍɪɴ ғᴇᴀᴛᴜʀᴇs.",
                 parse_mode="Markdown"
             )
         except:
@@ -1808,7 +1774,7 @@ async def addowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"ᴏᴡɴᴇʀ ɪᴅ: `{new_owner_id}`\n"
             f"ᴜsᴇʀɴᴀᴍᴇ: @{username}\n"
-            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`"
+            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`",
             parse_mode="Markdown"
         )
         
@@ -1822,7 +1788,7 @@ async def deleteowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴘʀɪᴍᴀʀʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴏᴡɴᴇʀs."
+            "ᴏɴʟʏ ᴘʀɪᴍᴀʀʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴏᴡɴᴇʀs.",
             parse_mode="Markdown"
         )
         return
@@ -1832,7 +1798,7 @@ async def deleteowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "🗑️ **ʀᴇᴍᴏᴠᴇ ᴏᴡɴᴇʀ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /deleteowner <ᴜsᴇʀ_ɪᴅ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /deleteowner 12345678"
+            "ᴇxᴀᴍᴘʟᴇ: /deleteowner 12345678",
             parse_mode="Markdown"
         )
         return
@@ -1844,21 +1810,18 @@ async def deleteowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("❌ ᴛʜɪs ᴜsᴇʀ ɪs ɴᴏᴛ ᴀɴ ᴏᴡɴᴇʀ", parse_mode="Markdown")
             return
         
-        
         if owners[str(owner_to_remove)].get("is_primary", False):
             await update.message.reply_text("❌ ᴄᴀɴɴᴏᴛ ʀᴇᴍᴏᴠᴇ ᴘʀɪᴍᴀʀʏ ᴏᴡɴᴇʀ", parse_mode="Markdown")
             return
-        
         
         removed_username = owners[str(owner_to_remove)].get("username", "")
         del owners[str(owner_to_remove)]
         save_owners(owners)
         
-        
         try:
             await context.bot.send_message(
                 chat_id=owner_to_remove,
-                text="⚠️ **ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴏᴡɴᴇʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ ғʀᴏᴍ ᴛʜᴇ ʙᴏᴛ."
+                text="⚠️ **ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ᴏᴡɴᴇʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ ғʀᴏᴍ ᴛʜᴇ ʙᴏᴛ.",
                 parse_mode="Markdown"
             )
         except:
@@ -1869,7 +1832,7 @@ async def deleteowner_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"ᴏᴡɴᴇʀ ɪᴅ: `{owner_to_remove}`\n"
             f"ᴜsᴇʀɴᴀᴍᴇ: @{removed_username}\n"
-            f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`"
+            f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`",
             parse_mode="Markdown"
         )
         
@@ -1884,7 +1847,7 @@ async def addreseller_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ʀᴇsᴇʟʟᴇʀs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ʀᴇsᴇʟʟᴇʀs.",
             parse_mode="Markdown"
         )
         return
@@ -1894,7 +1857,7 @@ async def addreseller_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "💰 **ᴀᴅᴅ ʀᴇsᴇʟʟᴇʀ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /addreseller <ᴜsᴇʀ_ɪᴅ> <ᴄʀᴇᴅɪᴛs> <ᴜsᴇʀɴᴀᴍᴇ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /addreseller 12345678 100 johndoe"
+            "ᴇxᴀᴍᴘʟᴇ: /addreseller 12345678 100 johndoe",
             parse_mode="Markdown"
         )
         return
@@ -1908,7 +1871,6 @@ async def addreseller_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("❌ ᴛʜɪs ᴜsᴇʀ ɪs ᴀʟʀᴇᴀᴅʏ ᴀ ʀᴇsᴇʟʟᴇʀ", parse_mode="Markdown")
             return
         
-        
         resellers[str(reseller_id)] = {
             "username": username,
             "credits": credits,
@@ -1919,11 +1881,10 @@ async def addreseller_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         }
         save_resellers(resellers)
         
-        
         try:
             await context.bot.send_message(
                 chat_id=reseller_id,
-                text=f"💰 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜ ʜᴀᴠᴇ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴀs ᴀ ʀᴇsᴇʟʟᴇʀ!\nɪɴɪᴛɪᴀʟ ᴄʀᴇᴅɪᴛs: {credits}\n\nʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴀᴅᴅ ᴜsᴇʀs ᴜsɪɴɢ /add ᴄᴏᴍᴍᴀɴᴅ."
+                text=f"💰 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs!**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜ ʜᴀᴠᴇ ʙᴇᴇɴ ᴀᴅᴅᴇᴅ ᴀs ᴀ ʀᴇsᴇʟʟᴇʀ!\nɪɴɪᴛɪᴀʟ ᴄʀᴇᴅɪᴛs: {credits}\n\nʏᴏᴜ ᴄᴀɴ ɴᴏᴡ ᴀᴅᴅ ᴜsᴇʀs ᴜsɪɴɢ /add ᴄᴏᴍᴍᴀɴᴅ.",
                 parse_mode="Markdown"
             )
         except:
@@ -1935,7 +1896,7 @@ async def addreseller_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"ʀᴇsᴇʟʟᴇʀ ɪᴅ: `{reseller_id}`\n"
             f"ᴜsᴇʀɴᴀᴍᴇ: @{username}\n"
             f"ᴄʀᴇᴅɪᴛs: {credits}\n"
-            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`"
+            f"ᴀᴅᴅᴇᴅ ʙʏ: `{user_id}`",
             parse_mode="Markdown"
         )
         
@@ -1949,7 +1910,7 @@ async def removereseller_command(update: Update, context: ContextTypes.DEFAULT_T
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ʀᴇsᴇʟʟᴇʀs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ʀᴇsᴇʟʟᴇʀs.",
             parse_mode="Markdown"
         )
         return
@@ -1959,7 +1920,7 @@ async def removereseller_command(update: Update, context: ContextTypes.DEFAULT_T
             "🗑️ **ʀᴇᴍᴏᴠᴇ ʀᴇsᴇʟʟᴇʀ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "ᴜsᴀɢᴇ: /removereseller <ᴜsᴇʀ_ɪᴅ>\n"
-            "ᴇxᴀᴍᴘʟᴇ: /removereseller 12345678"
+            "ᴇxᴀᴍᴘʟᴇ: /removereseller 12345678",
             parse_mode="Markdown"
         )
         return
@@ -1971,16 +1932,14 @@ async def removereseller_command(update: Update, context: ContextTypes.DEFAULT_T
             await update.message.reply_text("❌ ᴛʜɪs ᴜsᴇʀ ɪs ɴᴏᴛ ᴀ ʀᴇsᴇʟʟᴇʀ", parse_mode="Markdown")
             return
         
-        
         removed_username = resellers[str(reseller_to_remove)].get("username", "")
         del resellers[str(reseller_to_remove)]
         save_resellers(resellers)
         
-        
         try:
             await context.bot.send_message(
                 chat_id=reseller_to_remove,
-                text="⚠️ **ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ʀᴇsᴇʟʟᴇʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ ғʀᴏᴍ ᴛʜᴇ ʙᴏᴛ."
+                text="⚠️ **ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴ**\n━━━━━━━━━━━━━━━━━━━━━━\nʏᴏᴜʀ ʀᴇsᴇʟʟᴇʀ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴠᴏᴋᴇᴅ ғʀᴏᴍ ᴛʜᴇ ʙᴏᴛ.",
                 parse_mode="Markdown"
             )
         except:
@@ -1991,7 +1950,7 @@ async def removereseller_command(update: Update, context: ContextTypes.DEFAULT_T
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"ʀᴇsᴇʟʟᴇʀ ɪᴅ: `{reseller_to_remove}`\n"
             f"ᴜsᴇʀɴᴀᴍᴇ: @{removed_username}\n"
-            f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`"
+            f"ʀᴇᴍᴏᴠᴇᴅ ʙʏ: `{user_id}`",
             parse_mode="Markdown"
         )
         
@@ -2006,7 +1965,7 @@ async def addtoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ᴛᴏᴋᴇɴs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴀᴅᴅ ᴛᴏᴋᴇɴs.",
             parse_mode="Markdown"
         )
         return
@@ -2015,7 +1974,7 @@ async def addtoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴜsᴀɢᴇ: /addtoken <ɢɪᴛʜᴜʙ_ᴛᴏᴋᴇɴ>"
+            "ᴜsᴀɢᴇ: /addtoken <ɢɪᴛʜᴜʙ_ᴛᴏᴋᴇɴ>",
             parse_mode="Markdown"
         )
         return
@@ -2074,7 +2033,7 @@ async def tokens_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴠɪᴇᴡ ᴛᴏᴋᴇɴs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴠɪᴇᴡ ᴛᴏᴋᴇɴs.",
             parse_mode="Markdown"
         )
         return
@@ -2097,7 +2056,7 @@ async def removetoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴛᴏᴋᴇɴs."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ʀᴇᴍᴏᴠᴇ ᴛᴏᴋᴇɴs.",
             parse_mode="Markdown"
         )
         return
@@ -2106,7 +2065,7 @@ async def removetoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text(
             "❌ **ɪɴᴠᴀʟɪᴅ sʏɴᴛᴀx**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴜsᴀɢᴇ: /removetoken <ɴᴜᴍʙᴇʀ>"
+            "ᴜsᴀɢᴇ: /removetoken <ɴᴜᴍʙᴇʀ>",
             parse_mode="Markdown"
         )
         return
@@ -2125,7 +2084,7 @@ async def removetoken_command(update: Update, context: ContextTypes.DEFAULT_TYPE
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 sᴇʀᴠᴇʀ: `{removed_token['username']}`\n"
             f"📁 ʀᴇᴘᴏ: `{removed_token['repo']}`\n"
-            f"📊 ʀᴇᴍᴀɪɴɪɴɢ: {len(github_tokens)}"
+            f"📊 ʀᴇᴍᴀɪɴɪɴɢ: {len(github_tokens)}",
             parse_mode="Markdown"
         )
         
@@ -2140,7 +2099,7 @@ async def binary_upload_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
             "⚠️ **ᴀᴄᴄᴇss ᴅᴇɴɪᴇᴅ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴜᴘʟᴏᴀᴅ ʙɪɴᴀʀʏ."
+            "ᴏɴʟʏ ᴏᴡɴᴇʀs ᴄᴀɴ ᴜᴘʟᴏᴀᴅ ʙɪɴᴀʀʏ.",
             parse_mode="Markdown"
         )
         return ConversationHandler.END
@@ -2149,7 +2108,7 @@ async def binary_upload_command(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text(
             "❌ **ɴᴏ sᴇʀᴠᴇʀs ᴀᴠᴀɪʟᴀʙʟᴇ**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴅᴅᴇᴅ. ᴜsᴇ /addtoken ғɪʀsᴛ."
+            "ɴᴏ sᴇʀᴠᴇʀs ᴀᴅᴅᴇᴅ. ᴜsᴇ /addtoken ғɪʀsᴛ.",
             parse_mode="Markdown"
         )
         return ConversationHandler.END
@@ -2158,7 +2117,7 @@ async def binary_upload_command(update: Update, context: ContextTypes.DEFAULT_TY
         "📤 **ʙɪɴᴀʀʏ ᴜᴘʟᴏᴀᴅ**\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
         "ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴍᴇ ʏᴏᴜʀ ʙɪɴᴀʀʏ ғɪʟᴇ...\n"
-        "ɪᴛ ᴡɪʟʟ ʙᴇ ᴜᴘʟᴏᴀᴅᴇᴅ ᴛᴏ ᴀʟʟ ɢɪᴛʜᴜʙ ʀᴇᴘᴏs ᴀs `soul` ғɪʟᴇ."
+        "ɪᴛ ᴡɪʟʟ ʙᴇ ᴜᴘʟᴏᴀᴅᴇᴅ ᴛᴏ ᴀʟʟ ɢɪᴛʜᴜʙ ʀᴇᴘᴏs ᴀs `soul` ғɪʟᴇ.",
         parse_mode="Markdown"
     )
     
@@ -2190,7 +2149,8 @@ async def handle_binary_file(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await progress_msg.edit_text(
             f"📊 **ғɪʟᴇ ᴅᴏᴡɴʟᴏᴀᴅᴇᴅ: {file_size} ʙʏᴛᴇs**\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📤 ᴜᴘʟᴏᴀᴅɪɴɢ ᴛᴏ ᴀʟʟ ɢɪᴛʜᴜʙ ʀᴇᴘᴏs..."
+            "📤 ᴜᴘʟᴏᴀᴅɪɴɢ ᴛᴏ ᴀʟʟ ɢɪᴛʜᴜʙ ʀᴇᴘᴏs...",
+            parse_mode="Markdown"
         )
         
         success_count = 0
@@ -2254,10 +2214,10 @@ async def handle_binary_file(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"⚙️ **ʙɪɴᴀʀʏ ʀᴇᴀᴅʏ:** ✅"
         )
         
-        await progress_msg.edit_text(message)
+        await progress_msg.edit_text(message, parse_mode="Markdown")
         
     except Exception as e:
-        await progress_msg.edit_text(f"❌ **ᴇʀʀᴏʀ**\n━━━━━━━━━━━━━━━━━━━━━━\n{str(e)}")
+        await progress_msg.edit_text(f"❌ **ᴇʀʀᴏʀ**\n━━━━━━━━━━━━━━━━━━━━━━\n{str(e)}", parse_mode="Markdown")
     
     return ConversationHandler.END
 
@@ -2267,18 +2227,13 @@ async def cancel_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    
     if update.message and update.message.text and update.message.text.startswith('/'):
-        
         return
-    
-    
     pass
 
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
-    
     
     conv_handler_binary = ConversationHandler(
         entry_points=[CommandHandler('binary_upload', binary_upload_command)],
@@ -2302,10 +2257,8 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel_upload)]
     )
     
-    
     application.add_handler(conv_handler_binary)
     application.add_handler(conv_handler_broadcast)
-    
     
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
@@ -2315,7 +2268,6 @@ def main():
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("stop", stop_command))
     application.add_handler(CommandHandler("redeem", redeem_command))
-    
     
     application.add_handler(CommandHandler("add", add_command))
     application.add_handler(CommandHandler("remove", remove_command))
@@ -2333,19 +2285,15 @@ def main():
     application.add_handler(CommandHandler("gentrailkey", gentrailkey_command)) 
     application.add_handler(CommandHandler("removexpiredtoken", removexpiredtoken_command))  
     
-   
     application.add_handler(CommandHandler("addowner", addowner_command))
     application.add_handler(CommandHandler("deleteowner", deleteowner_command))
-    
     
     application.add_handler(CommandHandler("addreseller", addreseller_command))
     application.add_handler(CommandHandler("removereseller", removereseller_command))
     
-    
     application.add_handler(CommandHandler("addtoken", addtoken_command))
     application.add_handler(CommandHandler("tokens", tokens_command))
     application.add_handler(CommandHandler("removetoken", removetoken_command))
-    
     
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
